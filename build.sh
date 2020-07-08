@@ -9,18 +9,6 @@ yarn test
 
 yarn cache clean
 
-echo $TRAVIS
-
-echo ! $TRAVIS
-
-echo $TRAVIS_PULL_REQUEST_SLUG
-
-echo $TRAVIS_REPO_SLUG
-
-echo $TRAVIS_PULL_REQUEST_SLUG == "$TRAVIS_REPO_SLUG"
-
-echo $TRAVIS_PULL_REQUEST_SLUG == ""
-
 yarn
 
 # we do not run browserstack if environment has $TRAVIS variable
