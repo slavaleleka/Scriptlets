@@ -1,8 +1,8 @@
 language: node_js
 node_js:
-  - "10"
+  - 10
 script:
-  - bash -e ./build.sh
+  - bash ./build.sh
 
 notifications:
   slack: performix:yXTihlSzsLFSZiqbXMNzvTSX
