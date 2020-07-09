@@ -7,9 +7,7 @@ yarn install
 
 yarn test
 
-yarn cache clean
-
-yarn
+echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
 
 # we do not run browserstack if environment has $TRAVIS variable
 # or if it is pull request from fork $TRAVIS_PULL_REQUEST_SLUG != $TRAVIS_REPO_SLUG
