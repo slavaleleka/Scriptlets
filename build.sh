@@ -11,10 +11,6 @@ yarn test
 # or if it is pull request from fork $TRAVIS_PULL_REQUEST_SLUG != $TRAVIS_REPO_SLUG
 if [[ ! $TRAVIS || ($TRAVIS && ( $TRAVIS_PULL_REQUEST_SLUG == "$TRAVIS_REPO_SLUG" || $TRAVIS_PULL_REQUEST_SLUG == "" )) ]];
 then
-
-  # Kill browserstack processes
-  lsof -t -i:8585 || echo "no server processes before browserstack tests"
-
   yarn browserstack
 fi
 
