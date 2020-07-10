@@ -11,6 +11,7 @@ yarn test
 # or if it is pull request from fork $TRAVIS_PULL_REQUEST_SLUG != $TRAVIS_REPO_SLUG
 if [[ ! $TRAVIS || ($TRAVIS && ( $TRAVIS_PULL_REQUEST_SLUG == "$TRAVIS_REPO_SLUG" || $TRAVIS_PULL_REQUEST_SLUG == "" )) ]];
 then
+  yarn global install browserstack-runner
   yarn browserstack
 fi
 
