@@ -4845,8 +4845,6 @@ function AmazonApstag(source) {
 AmazonApstag.names = ['amazon-apstag', 'ubo-amazon_apstag.js', 'amazon_apstag.js'];
 AmazonApstag.injections = [hit, noopFunc];
 
-
-
 var redirectsList = /*#__PURE__*/Object.freeze({
     __proto__: null,
     noeval: noeval,
