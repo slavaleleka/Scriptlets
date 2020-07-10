@@ -13,7 +13,7 @@ if [[ ! $TRAVIS || ($TRAVIS && ( $TRAVIS_PULL_REQUEST_SLUG == "$TRAVIS_REPO_SLUG
 then
 
   # Kill browserstack processes
-  lsof -t -i:9961 || echo "no browserstack processes"
+  lsof -t -i:8585 || echo "no server processes before browserstack tests"
 
   yarn browserstack
 fi
