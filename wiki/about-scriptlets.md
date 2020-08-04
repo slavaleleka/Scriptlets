@@ -261,8 +261,10 @@ This scriptlet is basically the same as [abort-on-property-read](#abort-on-prope
 
 **Syntax**
 ```
-! Aborts script when it tries to access `window.alert`
+! Debug script if it tries to access `window.alert`
 example.org#%#//scriptlet('debug-on-property-read', 'alert')
+! of `window.open`
+example.org#%#//scriptlet('debug-on-property-read', 'open')
 ```
 [Scriptlet source](../src/scriptlets/debug-on-property-read.js)
 * * *
@@ -329,13 +331,18 @@ https://github.com/gorhill/uBlock/wiki/Resources-Library#json-prunejs-
 
 Related ABP source:
 https://github.com/adblockplus/adblockpluscore/blob/master/lib/content/snippets.js#L1285
+
 **Syntax**
 ```
-example.org#%#//scriptlet('json-prune'[, propsToRemove [, obligatoryProps]])
+example.org#%#//scriptlet('json-prune'[, propsToRemove [, obligatoryProps [, stack]]])
 ```
 
 - `propsToRemove` - optional, string of space-separated properties to remove
 - `obligatoryProps` - optional, string of space-separated properties which must be all present for the pruning to occur
+- `stack` - optional, string or regular expression that must match the current function call stack trace
+
+> Note please that you can use wildcard `*` for chain property name.
+e.g. 'ad.*.src' instead of 'ad.0.src ad.1.src ad.2.src ...'
 
 **Examples**
 1. Removes property `example` from the results of JSON.parse call
@@ -366,7 +373,18 @@ example.org#%#//scriptlet('json-prune'[, propsToRemove [, obligatoryProps]])
     example.org#%#//scriptlet('json-prune', 'a.b', 'adpath.url.first')
     ```
 
-4. Call with no arguments will log the current hostname and json payload at the console
+4. Removes property `content.ad` from the results of JSON.parse call it's error stack trace contains `test.js`
+    ```
+    example.org#%#//scriptlet('json-prune', 'content.ad', '', 'test.js')
+    ```
+
+5. A property in a list of properties can be a chain of properties with wildcard in it
+
+    ```
+    example.org#%#//scriptlet('json-prune', 'content.*.media.src', 'content.*.media.preroll')
+    ```
+
+6. Call with no arguments will log the current hostname and json payload at the console
     ```
     example.org#%#//scriptlet('json-prune')
     ```
@@ -855,13 +873,13 @@ example.org#%#//scriptlet('prevent-window-open'[, match[, search[, replacement]]
 ```
 5. Prevent all `window.open` calls and return 'trueFunc' instead of it if website checks it:
 ```
-    example.org#%#//scriptlet('prevent-window-open', , , 'trueFunc')
+    example.org#%#//scriptlet('prevent-window-open', '', '', 'trueFunc')
 ```
 6. Prevent all `window.open` and returns callback
 which returns object with property 'propName'=noopFunc
 as a property of window.open if website checks it:
 ```
-    example.org#%#//scriptlet('prevent-window-open', '1', , '{propName=noopFunc}')
+    example.org#%#//scriptlet('prevent-window-open', '1', '', '{propName=noopFunc}')
 ```
 [Scriptlet source](../src/scriptlets/prevent-window-open.js)
 * * *
@@ -1012,7 +1030,7 @@ https://github.com/gorhill/uBlock/wiki/Resources-Library#set-constantjs-
 
 **Syntax**
 ```
-example.org#%#//scriptlet('set-constant', property, value)
+example.org#%#//scriptlet('set-constant', property, value[, stack])
 ```
 
 - `property` - required, path to a property (joined with `.` if needed). The property must be attached to `window`.
@@ -1028,14 +1046,18 @@ example.org#%#//scriptlet('set-constant', property, value)
         - `falseFunc` - function returning false
         - `''` - empty string
         - `-1` - number value `-1`
+- `stack` - optional, string or regular expression that must match the current function call stack trace
 
 **Examples**
 ```
-! window.firstConst === false // this comparision will return true
+! window.firstConst === false // this comparision will return false
 example.org#%#//scriptlet('set-constant', 'firstConst', 'false')
 
-! window.secondConst() === true // call to the secondConst will return true
+! window.second() === trueFunc // 'second' call will return true
 example.org#%#//scriptlet('set-constant', 'secondConst', 'trueFunc')
+
+! document.third() === falseFunc  // 'third' call will return false if the method is related to checking.js
+example.org#%#//scriptlet('set-constant', 'secondConst', 'trueFunc', 'checking.js')
 ```
 [Scriptlet source](../src/scriptlets/set-constant.js)
 * * *

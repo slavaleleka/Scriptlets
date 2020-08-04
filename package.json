@@ -1,6 +1,6 @@
 {
     "name": "scriptlets",
-    "version": "1.2.5",
+    "version": "1.2.6",
     "scripts": {
         "watch": "rollup -c -w",
         "build": "rollup -c && babel-node redirects.build.js",
@@ -13,11 +13,12 @@
         "lint": "eslint .",
         "wiki:build-docs": "node scripts/build-docs.js",
         "wiki:check-updates": "node ./scripts/check-sources-updates.js",
-        "wiki:update": "yarn wiki:check-updates && node ./scripts/build-compatibility-table.js"
+        "wiki:update": "yarn wiki:check-updates && node ./scripts/build-compatibility-table.js",
+        "prepare-builds": "yarn corelibs && yarn build"
     },
     "husky": {
         "hooks": {
-            "pre-commit": "yarn lint"
+            "pre-commit": "yarn lint && echo \"DO NOT FORGET ABOUT BUILDS UPDATE (yarn prepare-builds)\""
         }
     },
     "author": "devteam@adguard.com",

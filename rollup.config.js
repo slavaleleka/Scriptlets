@@ -54,7 +54,6 @@ const mainConfig = {
             namedExports: true,
         }),
         babel({
-            exclude: 'node_modules/**',
             babelHelpers: 'runtime',
         }),
     ],
@@ -86,7 +85,6 @@ const cjsConfig = {
             namedExports: true,
         }),
         babel({
-            exclude: 'node_modules/**',
             babelHelpers: 'runtime',
         }),
         copy({
@@ -119,7 +117,6 @@ const redirectsBuild = {
             namedExports: true,
         }),
         babel({
-            exclude: 'node_modules/**',
             babelHelpers: 'runtime',
         }),
     ],
@@ -151,7 +148,6 @@ const testConfig = {
             namedExports: true,
         }),
         babel({
-            exclude: 'node_modules/**',
             babelHelpers: 'runtime',
         }),
         copy({
@@ -193,7 +189,6 @@ const tmpRedirectsConfig = {
             namedExports: true,
         }),
         babel({
-            exclude: 'node_modules/**',
             babelHelpers: 'runtime',
         }),
     ],

@@ -6,34 +6,28 @@
  */
 
 /**
- * Check is property exist in base object recursively
+ * Check if the property exists in the base object (recursively)
  *
  * If property doesn't exist in base object,
- * defines this property (for addProp = true)
+ * defines this property as 'undefined'
  * and returns base, property name and remaining part of property chain
  *
  * @param {Object} base
  * @param {string} chain
- * @param {boolean} [addProp=true]
- * defines is nonexistent base property should be assigned as 'undefined'
  * @returns {Chain}
  */
-export function getPropertyInChain(base, chain, addProp = true) {
+export function getPropertyInChain(base, chain) {
     const pos = chain.indexOf('.');
     if (pos === -1) {
         return { base, prop: chain };
     }
     const prop = chain.slice(0, pos);
-    const own = base[prop];
+    const nextBase = base[prop];
     chain = chain.slice(pos + 1);
-    if (own !== undefined) {
-        return getPropertyInChain(own, chain, addProp);
-    }
-
-    if (!addProp) {
-        return false;
+    if (nextBase !== undefined) {
+        return getPropertyInChain(nextBase, chain);
     }
 
     Object.defineProperty(base, prop, { configurable: true });
-    return { base: own, prop, chain };
+    return { base: nextBase, prop, chain };
 }

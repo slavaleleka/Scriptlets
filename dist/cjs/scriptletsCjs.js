@@ -1,7 +1,7 @@
 
 /**
  * AdGuard Scriptlets
- * Version 1.2.5
+ * Version 1.2.6
  */
 
 /**
@@ -37,20 +37,17 @@ function setPropertyAccess(object, property, descriptor) {
  */
 
 /**
- * Check is property exist in base object recursively
+ * Check if the property exists in the base object (recursively)
  *
  * If property doesn't exist in base object,
- * defines this property (for addProp = true)
+ * defines this property as 'undefined'
  * and returns base, property name and remaining part of property chain
  *
  * @param {Object} base
  * @param {string} chain
- * @param {boolean} [addProp=true]
- * defines is nonexistent base property should be assigned as 'undefined'
  * @returns {Chain}
  */
 function getPropertyInChain(base, chain) {
-  var addProp = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
   var pos = chain.indexOf('.');
 
   if (pos === -1) {
@@ -61,25 +58,88 @@ function getPropertyInChain(base, chain) {
   }
 
   var prop = chain.slice(0, pos);
-  var own = base[prop];
+  var nextBase = base[prop];
   chain = chain.slice(pos + 1);
 
-  if (own !== undefined) {
-    return getPropertyInChain(own, chain, addProp);
-  }
-
-  if (!addProp) {
-    return false;
+  if (nextBase !== undefined) {
+    return getPropertyInChain(nextBase, chain);
   }
 
   Object.defineProperty(base, prop, {
     configurable: true
   });
   return {
-    base: own,
+    base: nextBase,
     prop: prop,
     chain: chain
   };
+}
+
+/**
+ * @typedef Chain
+ * @property {Object} base
+ * @property {string} prop
+ * @property {string} [chain]
+ */
+
+/**
+ * Check if the property exists in the base object (recursively).
+ * Similar to getPropertyInChain but upgraded for json-prune:
+ * handle wildcard properties and does not define nonexistent base property as 'undefined'
+ *
+ * @param {Object} base
+ * @param {string} chain
+ * @param {boolean} [lookThrough=false]
+ * should the method look through it's props in order to wildcard
+ * @param {Array} [output=[]] result acc
+ * @returns {Chain[]} array of objects
+ */
+function getWildcardPropertyInChain(base, chain) {
+  var lookThrough = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+  var output = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : [];
+  var pos = chain.indexOf('.');
+
+  if (pos === -1) {
+    // for paths like 'a.b.*' every final nested prop should be processed
+    if (chain === '*') {
+      Object.keys(base).forEach(function (key) {
+        output.push({
+          base: base,
+          prop: key
+        });
+      });
+    } else {
+      output.push({
+        base: base,
+        prop: chain
+      });
+    }
+
+    return output;
+  }
+
+  var prop = chain.slice(0, pos);
+  var shouldLookThrough = prop === '[]' && Array.isArray(base) || prop === '*' && base instanceof Object;
+
+  if (shouldLookThrough) {
+    var nextProp = chain.slice(pos + 1);
+    var baseKeys = Object.keys(base); // if there is a wildcard prop in input chain (e.g. 'ad.*.src' for 'ad.0.src ad.1.src'),
+    // each one of base keys should be considered as a potential chain prop in final path
+
+    baseKeys.forEach(function (key) {
+      var item = base[key];
+      getWildcardPropertyInChain(item, nextProp, lookThrough, output);
+    });
+  }
+
+  var nextBase = base[prop];
+  chain = chain.slice(pos + 1);
+
+  if (nextBase !== undefined) {
+    getWildcardPropertyInChain(nextBase, chain, lookThrough, output);
+  }
+
+  return output;
 }
 
 /**
@@ -411,6 +471,7 @@ var dependencies = /*#__PURE__*/Object.freeze({
     randomId: randomId,
     setPropertyAccess: setPropertyAccess,
     getPropertyInChain: getPropertyInChain,
+    getWildcardPropertyInChain: getWildcardPropertyInChain,
     escapeRegExp: escapeRegExp,
     toRegExp: toRegExp,
     getBeforeRegExp: getBeforeRegExp,
@@ -849,7 +910,8 @@ function abortOnPropertyRead(source, property, stack) {
   setChainPropAccess(window, property);
   window.onerror = createOnErrorHandler(rid).bind();
 }
-abortOnPropertyRead.names = ['abort-on-property-read', 'abort-on-property-read.js', 'ubo-abort-on-property-read.js', 'aopr.js', 'ubo-aopr.js', 'abp-abort-on-property-read'];
+abortOnPropertyRead.names = ['abort-on-property-read', // aliases are needed for matching the related scriptlet converted into our syntax
+'abort-on-property-read.js', 'ubo-abort-on-property-read.js', 'aopr.js', 'ubo-aopr.js', 'ubo-abort-on-property-read', 'ubo-aopr', 'abp-abort-on-property-read'];
 abortOnPropertyRead.injections = [randomId, toRegExp, setPropertyAccess, getPropertyInChain, createOnErrorHandler, hit, matchStackTrace];
 
 /* eslint-disable max-len */
@@ -932,7 +994,8 @@ function abortOnPropertyWrite(source, property, stack) {
   setChainPropAccess(window, property);
   window.onerror = createOnErrorHandler(rid).bind();
 }
-abortOnPropertyWrite.names = ['abort-on-property-write', 'abort-on-property-write.js', 'ubo-abort-on-property-write.js', 'aopw.js', 'ubo-aopw.js', 'abp-abort-on-property-write'];
+abortOnPropertyWrite.names = ['abort-on-property-write', // aliases are needed for matching the related scriptlet converted into our syntax
+'abort-on-property-write.js', 'ubo-abort-on-property-write.js', 'aopw.js', 'ubo-aopw.js', 'ubo-abort-on-property-write', 'ubo-aopw', 'abp-abort-on-property-write'];
 abortOnPropertyWrite.injections = [randomId, setPropertyAccess, getPropertyInChain, createOnErrorHandler, hit, toRegExp, matchStackTrace];
 
 /* eslint-disable max-len */
@@ -1090,11 +1153,12 @@ function preventSetTimeout(source, match, delay) {
 
   window.setTimeout = timeoutWrapper;
 }
-preventSetTimeout.names = ['prevent-setTimeout', 'no-setTimeout-if.js', // new implementation of setTimeout-defuser.js
+preventSetTimeout.names = ['prevent-setTimeout', // aliases are needed for matching the related scriptlet converted into our syntax
+'no-setTimeout-if.js', // new implementation of setTimeout-defuser.js
 'ubo-no-setTimeout-if.js', 'setTimeout-defuser.js', // old name should be supported as well
 'ubo-setTimeout-defuser.js', 'nostif.js', // new short name of no-setTimeout-if
 'ubo-nostif.js', 'std.js', // old short scriptlet name
-'ubo-std.js'];
+'ubo-std.js', 'ubo-no-setTimeout-if', 'ubo-setTimeout-defuser', 'ubo-nostif', 'ubo-std'];
 preventSetTimeout.injections = [toRegExp, startsWith, hit, noopFunc];
 
 /* eslint-disable max-len */
@@ -1252,11 +1316,12 @@ function preventSetInterval(source, match, delay) {
 
   window.setInterval = intervalWrapper;
 }
-preventSetInterval.names = ['prevent-setInterval', 'no-setInterval-if.js', // new implementation of setInterval-defuser.js
+preventSetInterval.names = ['prevent-setInterval', // aliases are needed for matching the related scriptlet converted into our syntax
+'no-setInterval-if.js', // new implementation of setInterval-defuser.js
 'ubo-no-setInterval-if.js', 'setInterval-defuser.js', // old name should be supported as well
 'ubo-setInterval-defuser.js', 'nosiif.js', // new short name of no-setInterval-if
 'ubo-nosiif.js', 'sid.js', // old short scriptlet name
-'ubo-sid.js'];
+'ubo-sid.js', 'ubo-no-setInterval-if', 'ubo-setInterval-defuser', 'ubo-nosiif', 'ubo-sid'];
 preventSetInterval.injections = [toRegExp, startsWith, hit, noopFunc];
 
 /* eslint-disable max-len */
@@ -1301,13 +1366,13 @@ preventSetInterval.injections = [toRegExp, startsWith, hit, noopFunc];
  * ```
  * 5. Prevent all `window.open` calls and return 'trueFunc' instead of it if website checks it:
  * ```
- *     example.org#%#//scriptlet('prevent-window-open', , , 'trueFunc')
+ *     example.org#%#//scriptlet('prevent-window-open', '', '', 'trueFunc')
  * ```
  * 6. Prevent all `window.open` and returns callback
  * which returns object with property 'propName'=noopFunc
  * as a property of window.open if website checks it:
  * ```
- *     example.org#%#//scriptlet('prevent-window-open', '1', , '{propName=noopFunc}')
+ *     example.org#%#//scriptlet('prevent-window-open', '1', '', '{propName=noopFunc}')
  * ```
  */
 
@@ -1367,7 +1432,8 @@ function preventWindowOpen(source) {
 
   window.open = openWrapper;
 }
-preventWindowOpen.names = ['prevent-window-open', 'window.open-defuser.js', 'ubo-window.open-defuser.js'];
+preventWindowOpen.names = ['prevent-window-open', // aliases are needed for matching the related scriptlet converted into our syntax
+'window.open-defuser.js', 'ubo-window.open-defuser.js', 'ubo-window.open-defuser'];
 preventWindowOpen.injections = [toRegExp, startsWith, endsWith, substringBefore, substringAfter, hit, noopFunc, trueFunc];
 
 /* eslint-disable max-len */
@@ -1528,7 +1594,8 @@ function abortCurrentInlineScript(source, property, search) {
   setChainPropAccess(window, property);
   window.onerror = createOnErrorHandler(rid).bind();
 }
-abortCurrentInlineScript.names = ['abort-current-inline-script', 'abort-current-inline-script.js', 'ubo-abort-current-inline-script.js', 'acis.js', 'ubo-acis.js', 'abp-abort-current-inline-script'];
+abortCurrentInlineScript.names = ['abort-current-inline-script', // aliases are needed for matching the related scriptlet converted into our syntax
+'abort-current-inline-script.js', 'ubo-abort-current-inline-script.js', 'acis.js', 'ubo-acis.js', 'ubo-abort-current-inline-script', 'ubo-acis', 'abp-abort-current-inline-script'];
 abortCurrentInlineScript.injections = [randomId, setPropertyAccess, getPropertyInChain, toRegExp, createOnErrorHandler, hit];
 
 /* eslint-disable max-len */
@@ -1546,7 +1613,7 @@ abortCurrentInlineScript.injections = [randomId, setPropertyAccess, getPropertyI
  *
  * **Syntax**
  * ```
- * example.org#%#//scriptlet('set-constant', property, value)
+ * example.org#%#//scriptlet('set-constant', property, value[, stack])
  * ```
  *
  * - `property` - required, path to a property (joined with `.` if needed). The property must be attached to `window`.
@@ -1562,21 +1629,27 @@ abortCurrentInlineScript.injections = [randomId, setPropertyAccess, getPropertyI
  *         - `falseFunc` - function returning false
  *         - `''` - empty string
  *         - `-1` - number value `-1`
+ * - `stack` - optional, string or regular expression that must match the current function call stack trace
  *
  * **Examples**
  * ```
- * ! window.firstConst === false // this comparision will return true
+ * ! window.firstConst === false // this comparision will return false
  * example.org#%#//scriptlet('set-constant', 'firstConst', 'false')
  *
- * ! window.secondConst() === true // call to the secondConst will return true
+ * ! window.second() === trueFunc // 'second' call will return true
  * example.org#%#//scriptlet('set-constant', 'secondConst', 'trueFunc')
+ *
+ * ! document.third() === falseFunc  // 'third' call will return false if the method is related to checking.js
+ * example.org#%#//scriptlet('set-constant', 'secondConst', 'trueFunc', 'checking.js')
  * ```
  */
 
 /* eslint-enable max-len */
 
-function setConstant(source, property, value) {
-  if (!property) {
+function setConstant(source, property, value, stack) {
+  var stackRegexp = stack ? toRegExp(stack) : toRegExp('/.?/');
+
+  if (!property || !matchStackTrace(stackRegexp, new Error().stack)) {
     return;
   }
 
@@ -1631,7 +1704,21 @@ function setConstant(source, property, value) {
     var chainInfo = getPropertyInChain(owner, property);
     var base = chainInfo.base;
     var prop = chainInfo.prop,
-        chain = chainInfo.chain;
+        chain = chainInfo.chain; // The scriptlet might be executed before the chain property has been created.
+    // In this case we're checking whether the base element exists or not
+    // and if not, we simply exit without overriding anything
+
+    if (base instanceof Object === false && base === null) {
+      // log the reason only while debugging
+      if (source.verbose) {
+        var props = property.split('.');
+        var propIndex = props.indexOf(prop);
+        var baseName = props[propIndex - 1];
+        console.log("set-constant failed because the property '".concat(baseName, "' does not exist")); // eslint-disable-line no-console
+      }
+
+      return;
+    }
 
     if (chain) {
       var setter = function setter(a) {
@@ -1670,8 +1757,9 @@ function setConstant(source, property, value) {
 
   setChainPropAccess(window, property);
 }
-setConstant.names = ['set-constant', 'set-constant.js', 'ubo-set-constant.js', 'set.js', 'ubo-set.js'];
-setConstant.injections = [getPropertyInChain, setPropertyAccess, hit, noopFunc, trueFunc, falseFunc];
+setConstant.names = ['set-constant', // aliases are needed for matching the related scriptlet converted into our syntax
+'set-constant.js', 'ubo-set-constant.js', 'set.js', 'ubo-set.js', 'ubo-set-constant', 'ubo-set'];
+setConstant.injections = [getPropertyInChain, setPropertyAccess, toRegExp, matchStackTrace, hit, noopFunc, trueFunc, falseFunc];
 
 /* eslint-disable max-len */
 
@@ -1757,7 +1845,8 @@ function removeCookie(source, match) {
   rmCookie();
   window.addEventListener('beforeunload', rmCookie);
 }
-removeCookie.names = ['remove-cookie', 'cookie-remover.js', 'ubo-cookie-remover.js'];
+removeCookie.names = ['remove-cookie', // aliases are needed for matching the related scriptlet converted into our syntax
+'cookie-remover.js', 'ubo-cookie-remover.js', 'ubo-cookie-remover'];
 removeCookie.injections = [toRegExp, hit];
 
 /* eslint-disable max-len */
@@ -1829,7 +1918,8 @@ function preventAddEventListener(source, eventSearch, funcSearch) {
 
   window.EventTarget.prototype.addEventListener = addEventListenerWrapper;
 }
-preventAddEventListener.names = ['prevent-addEventListener', 'addEventListener-defuser.js', 'ubo-addEventListener-defuser.js', 'aeld.js', 'ubo-aeld.js'];
+preventAddEventListener.names = ['prevent-addEventListener', // aliases are needed for matching the related scriptlet converted into our syntax
+'addEventListener-defuser.js', 'ubo-addEventListener-defuser.js', 'aeld.js', 'ubo-aeld.js', 'ubo-addEventListener-defuser', 'ubo-aeld'];
 preventAddEventListener.injections = [toRegExp, hit];
 
 /* eslint-disable consistent-return, no-eval */
@@ -1911,7 +2001,8 @@ function preventBab(source) {
     }
   };
 }
-preventBab.names = ['prevent-bab', 'nobab.js', 'ubo-nobab.js', 'bab-defuser.js', 'ubo-bab-defuser.js'];
+preventBab.names = ['prevent-bab', // aliases are needed for matching the related scriptlet converted into our syntax
+'nobab.js', 'ubo-nobab.js', 'bab-defuser.js', 'ubo-bab-defuser.js', 'ubo-nobab', 'ubo-bab-defuser'];
 preventBab.injections = [hit];
 
 /* eslint-disable no-unused-vars, no-extra-bind, func-names */
@@ -1969,7 +2060,8 @@ function nowebrtc(source) {
     }.bind(null);
   }
 }
-nowebrtc.names = ['nowebrtc', 'nowebrtc.js', 'ubo-nowebrtc.js'];
+nowebrtc.names = ['nowebrtc', // aliases are needed for matching the related scriptlet converted into our syntax
+'nowebrtc.js', 'ubo-nowebrtc.js', 'ubo-nowebrtc'];
 nowebrtc.injections = [hit, noopFunc];
 
 /* eslint-disable no-console */
@@ -2014,7 +2106,8 @@ function logAddEventListener(source) {
 
   window.EventTarget.prototype.addEventListener = addEventListenerWrapper;
 }
-logAddEventListener.names = ['log-addEventListener', 'addEventListener-logger.js', 'ubo-addEventListener-logger.js', 'aell.js', 'ubo-aell.js'];
+logAddEventListener.names = ['log-addEventListener', // aliases are needed for matching the related scriptlet converted into our syntax
+'addEventListener-logger.js', 'ubo-addEventListener-logger.js', 'aell.js', 'ubo-aell.js', 'ubo-addEventListener-logger', 'ubo-aell'];
 logAddEventListener.injections = [hit];
 
 /* eslint-disable no-console, no-eval */
@@ -2109,7 +2202,8 @@ function noeval(source) {
     hit(source, "AdGuard has prevented eval:\n".concat(s));
   }.bind();
 }
-noeval.names = ['noeval', 'noeval.js', 'silent-noeval.js', 'ubo-noeval.js', 'ubo-silent-noeval.js'];
+noeval.names = ['noeval', // aliases are needed for matching the related scriptlet converted into our syntax
+'noeval.js', 'silent-noeval.js', 'ubo-noeval.js', 'ubo-silent-noeval.js', 'ubo-noeval', 'ubo-silent-noeval'];
 noeval.injections = [hit];
 
 /* eslint-disable no-eval, no-extra-bind, func-names */
@@ -2152,7 +2246,8 @@ function preventEvalIf(source, search) {
     return undefined;
   }.bind(window);
 }
-preventEvalIf.names = ['prevent-eval-if', 'noeval-if.js', 'ubo-noeval-if.js'];
+preventEvalIf.names = ['prevent-eval-if', // aliases are needed for matching the related scriptlet converted into our syntax
+'noeval-if.js', 'ubo-noeval-if.js', 'ubo-noeval-if'];
 preventEvalIf.injections = [toRegExp, hit];
 
 /* eslint-disable no-console, func-names, no-multi-assign */
@@ -2247,7 +2342,8 @@ function preventFab(source) {
     Object.defineProperty(window, 'sniffAdBlock', getsetfab);
   }
 }
-preventFab.names = ['prevent-fab-3.2.0', 'nofab.js', 'ubo-nofab.js', 'fuckadblock.js-3.2.0', 'ubo-fuckadblock.js-3.2.0'];
+preventFab.names = ['prevent-fab-3.2.0', // aliases are needed for matching the related scriptlet converted into our syntax
+'nofab.js', 'ubo-nofab.js', 'fuckadblock.js-3.2.0', 'ubo-fuckadblock.js-3.2.0', 'ubo-nofab'];
 preventFab.injections = [hit, noopFunc, noopThis];
 
 /* eslint-disable no-console, func-names, no-multi-assign */
@@ -2284,7 +2380,8 @@ function setPopadsDummy(source) {
     }
   });
 }
-setPopadsDummy.names = ['set-popads-dummy', 'popads-dummy.js', 'ubo-popads-dummy.js'];
+setPopadsDummy.names = ['set-popads-dummy', // aliases are needed for matching the related scriptlet converted into our syntax
+'popads-dummy.js', 'ubo-popads-dummy.js', 'ubo-popads-dummy'];
 setPopadsDummy.injections = [hit];
 
 /**
@@ -2322,7 +2419,8 @@ function preventPopadsNet(source) {
   window.onerror = createOnErrorHandler(rid).bind();
   hit(source);
 }
-preventPopadsNet.names = ['prevent-popads-net', 'popads.net.js', 'ubo-popads.net.js'];
+preventPopadsNet.names = ['prevent-popads-net', // aliases are needed for matching the related scriptlet converted into our syntax
+'popads.net.js', 'ubo-popads.net.js', 'ubo-popads.net'];
 preventPopadsNet.injections = [createOnErrorHandler, randomId, hit];
 
 /* eslint-disable func-names */
@@ -2422,7 +2520,8 @@ function preventAdfly(source) {
     window.console.error('Failed to set up prevent-adfly scriptlet');
   }
 }
-preventAdfly.names = ['prevent-adfly', 'adfly-defuser.js', 'ubo-adfly-defuser.js'];
+preventAdfly.names = ['prevent-adfly', // aliases are needed for matching the related scriptlet converted into our syntax
+'adfly-defuser.js', 'ubo-adfly-defuser.js', 'ubo-adfly-defuser'];
 preventAdfly.injections = [setPropertyAccess, hit];
 
 /* eslint-disable max-len */
@@ -2437,8 +2536,10 @@ preventAdfly.injections = [setPropertyAccess, hit];
  *
  * **Syntax**
  * ```
- * ! Aborts script when it tries to access `window.alert`
+ * ! Debug script if it tries to access `window.alert`
  * example.org#%#//scriptlet('debug-on-property-read', 'alert')
+ * ! of `window.open`
+ * example.org#%#//scriptlet('debug-on-property-read', 'open')
  * ```
  */
 
@@ -2734,7 +2835,8 @@ function removeAttr(source, attrs, selector) {
 
   observeDOMChanges(rmattr, true);
 }
-removeAttr.names = ['remove-attr', 'remove-attr.js', 'ubo-remove-attr.js', 'ra.js', 'ubo-ra.js'];
+removeAttr.names = ['remove-attr', // aliases are needed for matching the related scriptlet converted into our syntax
+'remove-attr.js', 'ubo-remove-attr.js', 'ra.js', 'ubo-ra.js', 'ubo-remove-attr', 'ubo-ra'];
 removeAttr.injections = [hit, observeDOMChanges];
 
 /* eslint-disable max-len */
@@ -2850,7 +2952,8 @@ function removeClass(source, classNames, selector) {
 
   observeDOMChanges(removeClassHandler, true, CLASS_ATTR_NAME);
 }
-removeClass.names = ['remove-class', 'remove-class.js', 'ubo-remove-class.js', 'rc.js', 'ubo-rc.js'];
+removeClass.names = ['remove-class', // aliases are needed for matching the related scriptlet converted into our syntax
+'remove-class.js', 'ubo-remove-class.js', 'rc.js', 'ubo-rc.js', 'ubo-remove-class', 'ubo-rc'];
 removeClass.injections = [hit, observeDOMChanges];
 
 /**
@@ -2884,7 +2987,8 @@ function disableNewtabLinks(source) {
     }
   });
 }
-disableNewtabLinks.names = ['disable-newtab-links', 'disable-newtab-links.js', 'ubo-disable-newtab-links.js'];
+disableNewtabLinks.names = ['disable-newtab-links', // aliases are needed for matching the related scriptlet converted into our syntax
+'disable-newtab-links.js', 'ubo-disable-newtab-links.js', 'ubo-disable-newtab-links'];
 disableNewtabLinks.injections = [hit];
 
 /* eslint-disable max-len */
@@ -2970,7 +3074,8 @@ function adjustSetInterval(source, match, interval, boost) {
 
   window.setInterval = intervalWrapper;
 }
-adjustSetInterval.names = ['adjust-setInterval', 'nano-setInterval-booster.js', 'ubo-nano-setInterval-booster.js', 'nano-sib.js', 'ubo-nano-sib.js'];
+adjustSetInterval.names = ['adjust-setInterval', // aliases are needed for matching the related scriptlet converted into our syntax
+'nano-setInterval-booster.js', 'ubo-nano-setInterval-booster.js', 'nano-sib.js', 'ubo-nano-sib.js', 'ubo-nano-setInterval-booster', 'ubo-nano-sib'];
 adjustSetInterval.injections = [toRegExp, hit];
 
 /* eslint-disable max-len */
@@ -3056,7 +3161,8 @@ function adjustSetTimeout(source, match, timeout, boost) {
 
   window.setTimeout = timeoutWrapper;
 }
-adjustSetTimeout.names = ['adjust-setTimeout', 'nano-setTimeout-booster.js', 'ubo-nano-setTimeout-booster.js', 'nano-stb.js', 'ubo-nano-stb.js'];
+adjustSetTimeout.names = ['adjust-setTimeout', // aliases are needed for matching the related scriptlet converted into our syntax
+'nano-setTimeout-booster.js', 'ubo-nano-setTimeout-booster.js', 'nano-stb.js', 'ubo-nano-stb.js', 'ubo-nano-setTimeout-booster', 'ubo-nano-stb'];
 adjustSetTimeout.injections = [toRegExp, hit];
 
 /* eslint-disable max-len */
@@ -3129,13 +3235,18 @@ dirString.injections = [hit];
  *
  * Related ABP source:
  * https://github.com/adblockplus/adblockpluscore/blob/master/lib/content/snippets.js#L1285
+ *
  * **Syntax**
  * ```
- * example.org#%#//scriptlet('json-prune'[, propsToRemove [, obligatoryProps]])
+ * example.org#%#//scriptlet('json-prune'[, propsToRemove [, obligatoryProps [, stack]]])
  * ```
  *
  * - `propsToRemove` - optional, string of space-separated properties to remove
  * - `obligatoryProps` - optional, string of space-separated properties which must be all present for the pruning to occur
+ * - `stack` - optional, string or regular expression that must match the current function call stack trace
+ *
+ * > Note please that you can use wildcard `*` for chain property name.
+ * e.g. 'ad.*.src' instead of 'ad.0.src ad.1.src ad.2.src ...'
  *
  * **Examples**
  * 1. Removes property `example` from the results of JSON.parse call
@@ -3166,7 +3277,18 @@ dirString.injections = [hit];
  *     example.org#%#//scriptlet('json-prune', 'a.b', 'adpath.url.first')
  *     ```
  *
- * 4. Call with no arguments will log the current hostname and json payload at the console
+ * 4. Removes property `content.ad` from the results of JSON.parse call it's error stack trace contains `test.js`
+ *     ```
+ *     example.org#%#//scriptlet('json-prune', 'content.ad', '', 'test.js')
+ *     ```
+ *
+ * 5. A property in a list of properties can be a chain of properties with wildcard in it
+ *
+ *     ```
+ *     example.org#%#//scriptlet('json-prune', 'content.*.media.src', 'content.*.media.preroll')
+ *     ```
+ *
+ * 6. Call with no arguments will log the current hostname and json payload at the console
  *     ```
  *     example.org#%#//scriptlet('json-prune')
  *     ```
@@ -3174,28 +3296,47 @@ dirString.injections = [hit];
 
 /* eslint-enable max-len */
 
-function jsonPrune(source, propsToRemove, requiredInitialProps) {
-  // eslint-disable-next-line no-console
+function jsonPrune(source, propsToRemove, requiredInitialProps, stack) {
+  var stackRegexp = stack ? toRegExp(stack) : toRegExp('/.?/');
+
+  if (!matchStackTrace(stackRegexp, new Error().stack)) {
+    return;
+  } // eslint-disable-next-line no-console
+
+
   var log = console.log.bind(console);
   var prunePaths = propsToRemove !== undefined && propsToRemove !== '' ? propsToRemove.split(/ +/) : [];
-  var needlePaths = requiredInitialProps !== undefined && requiredInitialProps !== '' ? requiredInitialProps.split(/ +/) : [];
+  var requiredPaths = requiredInitialProps !== undefined && requiredInitialProps !== '' ? requiredInitialProps.split(/ +/) : [];
 
   function isPruningNeeded(root) {
     if (!root) {
       return false;
     }
 
-    for (var i = 0; i < needlePaths.length; i += 1) {
-      var needlePath = needlePaths[i];
-      var details = getPropertyInChain(root, needlePath, false);
-      var nestedPropName = needlePath.split('.').pop();
+    var shouldProcess;
 
-      if (details && details.base[nestedPropName] === undefined) {
-        return false;
+    for (var i = 0; i < requiredPaths.length; i += 1) {
+      var requiredPath = requiredPaths[i];
+      var lastNestedPropName = requiredPath.split('.').pop();
+      var hasWildcard = requiredPath.indexOf('.*.') > -1 || requiredPath.indexOf('*.') > -1 || requiredPath.indexOf('.*') > -1; // if the path has wildcard, getPropertyInChain should 'look through' chain props
+
+      var details = getWildcardPropertyInChain(root, requiredPath, hasWildcard); // start value of 'shouldProcess' due to checking below
+
+      shouldProcess = !hasWildcard;
+
+      for (var _i = 0; _i < details.length; _i += 1) {
+        if (hasWildcard) {
+          // if there is a wildcard,
+          // at least one (||) of props chain should be present in object
+          shouldProcess = !(details[_i].base[lastNestedPropName] === undefined) || shouldProcess;
+        } else {
+          // otherwise each one (&&) of them should be there
+          shouldProcess = !(details[_i].base[lastNestedPropName] === undefined) && shouldProcess;
+        }
       }
     }
 
-    return true;
+    return shouldProcess;
   }
 
   var nativeParse = JSON.parse;
@@ -3205,32 +3346,36 @@ function jsonPrune(source, propsToRemove, requiredInitialProps) {
       args[_key] = arguments[_key];
     }
 
-    var r = nativeParse.apply(window, args);
+    var root = nativeParse.apply(window, args);
 
     if (prunePaths.length === 0) {
-      log(window.location.hostname, r);
-      return r;
+      log(window.location.hostname, root);
+      return root;
     }
 
-    if (isPruningNeeded(r) === false) {
-      return r;
-    }
+    if (isPruningNeeded(root) === false) {
+      return root;
+    } // if pruning is needed, we check every input pathToRemove
+    // and delete it if root has it
+
 
     prunePaths.forEach(function (path) {
-      var ownerObj = getPropertyInChain(r, path, false);
-
-      if (ownerObj !== undefined && ownerObj.base) {
-        delete ownerObj.base[ownerObj.prop];
-      }
+      var ownerObjArr = getWildcardPropertyInChain(root, path, true);
+      ownerObjArr.forEach(function (ownerObj) {
+        if (ownerObj !== undefined && ownerObj.base) {
+          delete ownerObj.base[ownerObj.prop];
+        }
+      });
     });
     hit(source);
-    return r;
+    return root;
   };
 
   JSON.parse = parseWrapper;
 }
-jsonPrune.names = ['json-prune', 'json-prune.js', 'ubo-json-prune.js'];
-jsonPrune.injections = [hit, getPropertyInChain];
+jsonPrune.names = ['json-prune', // aliases are needed for matching the related scriptlet converted into our syntax
+'json-prune.js', 'ubo-json-prune.js', 'ubo-json-prune', 'abp-json-prune'];
+jsonPrune.injections = [hit, toRegExp, matchStackTrace, getWildcardPropertyInChain];
 
 /* eslint-disable max-len */
 
@@ -3341,7 +3486,8 @@ function preventRequestAnimationFrame(source, match) {
 
   window.requestAnimationFrame = rafWrapper;
 }
-preventRequestAnimationFrame.names = ['prevent-requestAnimationFrame', 'no-requestAnimationFrame-if.js', 'ubo-no-requestAnimationFrame-if.js', 'norafif.js', 'ubo-norafif.js', 'ubo-no-requestAnimationFrame-if', 'ubo-norafif'];
+preventRequestAnimationFrame.names = ['prevent-requestAnimationFrame', // aliases are needed for matching the related scriptlet converted into our syntax
+'no-requestAnimationFrame-if.js', 'ubo-no-requestAnimationFrame-if.js', 'norafif.js', 'ubo-norafif.js', 'ubo-no-requestAnimationFrame-if', 'ubo-norafif'];
 preventRequestAnimationFrame.injections = [hit, startsWith, toRegExp, noopFunc];
 
 /* eslint-disable max-len */
@@ -4151,9 +4297,10 @@ function GoogleAnalytics(source) {
   proto.get = noopFunc;
   proto.set = noopFunc;
   proto.send = noopFunc;
-  var googleAnalyticsName = window.GoogleAnalyticsObject || 'ga';
+  var googleAnalyticsName = window.GoogleAnalyticsObject || 'ga'; // a -- fake arg for 'ga.length < 1' antiadblock checking
+  // eslint-disable-next-line no-unused-vars
 
-  function ga() {
+  function ga(a) {
     var len = arguments.length;
 
     if (len === 0) {
@@ -4316,7 +4463,7 @@ GoogleAnalyticsGa.injections = [hit, noopFunc];
 /* eslint-enable max-len */
 
 function GoogleSyndicationAdsByGoogle(source) {
-  window.adsbygoogle = window.adsbygoogle || {
+  window.adsbygoogle = {
     length: 0,
     loaded: true,
     push: function push() {
@@ -4352,10 +4499,14 @@ function GoogleSyndicationAdsByGoogle(source) {
       aswiftIframe.id = "".concat(ASWIFT_IFRAME_MARKER).concat(i + 1);
       aswiftIframe.style = css;
       adElems[i].appendChild(aswiftIframe);
+      var innerAswiftIframe = document.createElement('iframe');
+      aswiftIframe.contentWindow.document.body.appendChild(innerAswiftIframe);
       var googleadsIframe = document.createElement('iframe');
       googleadsIframe.id = "".concat(GOOGLE_ADS_IFRAME_MARKER).concat(i + 1);
       googleadsIframe.style = css;
       adElems[i].appendChild(googleadsIframe);
+      var innerGoogleadsIframe = document.createElement('iframe');
+      googleadsIframe.contentWindow.document.body.appendChild(innerGoogleadsIframe);
       executed = true;
     }
   }

@@ -5,6 +5,8 @@ import {
     falseFunc,
     getPropertyInChain,
     setPropertyAccess,
+    toRegExp,
+    matchStackTrace,
 } from '../helpers';
 
 /* eslint-disable max-len */
@@ -21,7 +23,7 @@ import {
  *
  * **Syntax**
  * ```
- * example.org#%#//scriptlet('set-constant', property, value)
+ * example.org#%#//scriptlet('set-constant', property, value[, stack])
  * ```
  *
  * - `property` - required, path to a property (joined with `.` if needed). The property must be attached to `window`.
@@ -37,19 +39,25 @@ import {
  *         - `falseFunc` - function returning false
  *         - `''` - empty string
  *         - `-1` - number value `-1`
+ * - `stack` - optional, string or regular expression that must match the current function call stack trace
  *
  * **Examples**
  * ```
- * ! window.firstConst === false // this comparision will return true
+ * ! window.firstConst === false // this comparision will return false
  * example.org#%#//scriptlet('set-constant', 'firstConst', 'false')
  *
- * ! window.secondConst() === true // call to the secondConst will return true
+ * ! window.second() === trueFunc // 'second' call will return true
  * example.org#%#//scriptlet('set-constant', 'secondConst', 'trueFunc')
+ *
+ * ! document.third() === falseFunc  // 'third' call will return false if the method is related to checking.js
+ * example.org#%#//scriptlet('set-constant', 'secondConst', 'trueFunc', 'checking.js')
  * ```
  */
 /* eslint-enable max-len */
-export function setConstant(source, property, value) {
-    if (!property) {
+export function setConstant(source, property, value, stack) {
+    const stackRegexp = stack ? toRegExp(stack) : toRegExp('/.?/');
+    if (!property
+        || !matchStackTrace(stackRegexp, new Error().stack)) {
         return;
     }
 
@@ -101,6 +109,21 @@ export function setConstant(source, property, value) {
         const chainInfo = getPropertyInChain(owner, property);
         let { base } = chainInfo;
         const { prop, chain } = chainInfo;
+
+        // The scriptlet might be executed before the chain property has been created.
+        // In this case we're checking whether the base element exists or not
+        // and if not, we simply exit without overriding anything
+        if (base instanceof Object === false && base === null) {
+            // log the reason only while debugging
+            if (source.verbose) {
+                const props = property.split('.');
+                const propIndex = props.indexOf(prop);
+                const baseName = props[propIndex - 1];
+                console.log(`set-constant failed because the property '${baseName}' does not exist`); // eslint-disable-line no-console
+            }
+            return;
+        }
+
         if (chain) {
             const setter = (a) => {
                 base = a;
@@ -133,14 +156,19 @@ export function setConstant(source, property, value) {
 
 setConstant.names = [
     'set-constant',
+    // aliases are needed for matching the related scriptlet converted into our syntax
     'set-constant.js',
     'ubo-set-constant.js',
     'set.js',
     'ubo-set.js',
+    'ubo-set-constant',
+    'ubo-set',
 ];
 setConstant.injections = [
     getPropertyInChain,
     setPropertyAccess,
+    toRegExp,
+    matchStackTrace,
     hit,
     noopFunc,
     trueFunc,
