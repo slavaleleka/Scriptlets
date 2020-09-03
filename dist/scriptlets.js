@@ -1,7 +1,7 @@
 
 /**
  * AdGuard Scriptlets
- * Version 1.3.3
+ * Version 1.3.4
  */
 
 (function () {
@@ -5195,58 +5195,6 @@
         AmazonApstag: AmazonApstag
     });
 
-    /**
-     * Finds redirect resource by it's name
-     * @param {string} name - redirect name
-     */
-
-    var getRedirectByName = function getRedirectByName(name) {
-      var redirects = Object.keys(redirectsList).map(function (key) {
-        return redirectsList[key];
-      });
-      return redirects.find(function (r) {
-        return r.names && r.names.indexOf(name) > -1;
-      });
-    };
-    /**
-     * @typedef {Object} Source - redirect properties
-     * @property {string} name redirect name
-     * @property {Array<string>} args Arguments for redirect function
-     * @property {'extension'|'test'} [engine] -
-     * Defines the final form of redirect string presentation
-     * @property {boolean} [verbose] flag to enable printing to console debug information
-     */
-
-    /**
-     * Returns redirect code by param
-     * @param {Source} source
-     * @returns {string} redirect code
-     */
-
-
-    var getRedirectCode = function getRedirectCode(source) {
-      var redirect = getRedirectByName(source.name);
-      var result = attachDependencies(redirect);
-      result = addCall(redirect, result); // redirect code for different sources is checked in tests
-      // so it should be just a code without any source and props passed
-
-      result = source.engine === 'test' ? wrapInNonameFunc(result) : passSourceAndProps(source, result);
-      return result;
-    };
-
-    var redirectsCjs = {
-      getCode: getRedirectCode,
-      isAdgRedirectRule: validator.isAdgRedirectRule,
-      isValidAdgRedirectRule: validator.isValidAdgRedirectRule,
-      isAdgRedirectCompatibleWithUbo: validator.isAdgRedirectCompatibleWithUbo,
-      isUboRedirectCompatibleWithAdg: validator.isUboRedirectCompatibleWithAdg,
-      isAbpRedirectCompatibleWithAdg: validator.isAbpRedirectCompatibleWithAdg,
-      convertUboRedirectToAdg: convertUboRedirectToAdg,
-      convertAbpRedirectToAdg: convertAbpRedirectToAdg,
-      convertRedirectToAdg: convertRedirectToAdg,
-      convertAdgRedirectToUbo: convertAdgRedirectToUbo
-    };
-
     function _classCallCheck(instance, Constructor) {
       if (!(instance instanceof Constructor)) {
         throw new TypeError("Cannot call a class as a function");
@@ -9227,6 +9175,59 @@
     }();
 
     /**
+     * Finds redirect resource by it's name
+     * @param {string} name - redirect name
+     */
+
+    var getRedirectByName = function getRedirectByName(name) {
+      var redirects = Object.keys(redirectsList).map(function (key) {
+        return redirectsList[key];
+      });
+      return redirects.find(function (r) {
+        return r.names && r.names.indexOf(name) > -1;
+      });
+    };
+    /**
+     * @typedef {Object} Source - redirect properties
+     * @property {string} name redirect name
+     * @property {Array<string>} args Arguments for redirect function
+     * @property {'extension'|'test'} [engine] -
+     * Defines the final form of redirect string presentation
+     * @property {boolean} [verbose] flag to enable printing to console debug information
+     */
+
+    /**
+     * Returns redirect code by param
+     * @param {Source} source
+     * @returns {string} redirect code
+     */
+
+
+    var getRedirectCode = function getRedirectCode(source) {
+      var redirect = getRedirectByName(source.name);
+      var result = attachDependencies(redirect);
+      result = addCall(redirect, result); // redirect code for different sources is checked in tests
+      // so it should be just a code without any source and props passed
+
+      result = source.engine === 'test' ? wrapInNonameFunc(result) : passSourceAndProps(source, result);
+      return result;
+    };
+
+    var redirectsCjs = {
+      Redirects: Redirects,
+      getCode: getRedirectCode,
+      isAdgRedirectRule: validator.isAdgRedirectRule,
+      isValidAdgRedirectRule: validator.isValidAdgRedirectRule,
+      isAdgRedirectCompatibleWithUbo: validator.isAdgRedirectCompatibleWithUbo,
+      isUboRedirectCompatibleWithAdg: validator.isUboRedirectCompatibleWithAdg,
+      isAbpRedirectCompatibleWithAdg: validator.isAbpRedirectCompatibleWithAdg,
+      convertUboRedirectToAdg: convertUboRedirectToAdg,
+      convertAbpRedirectToAdg: convertAbpRedirectToAdg,
+      convertRedirectToAdg: convertRedirectToAdg,
+      convertAdgRedirectToUbo: convertAdgRedirectToUbo
+    };
+
+    /**
      * @typedef {Object} Source - scriptlet properties
      * @property {string} name Scriptlet name
      * @property {Array<string>} args Arguments for scriptlet function
@@ -9276,8 +9277,7 @@
         convertAbpToAdg: convertAbpSnippetToAdg,
         convertScriptletToAdg: convertScriptletToAdg,
         convertAdgToUbo: convertAdgScriptletToUbo,
-        redirects: redirectsCjs,
-        Redirects: Redirects
+        redirects: redirectsCjs
       };
     }();
 

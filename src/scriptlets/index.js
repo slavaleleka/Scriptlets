@@ -1,7 +1,5 @@
 import { redirectsCjs } from '../redirects';
 
-import Redirects from '../redirects/redirects';
-
 import {
     attachDependencies,
     addCall,
@@ -69,7 +67,6 @@ const scriptletsObject = (() => ({
     convertScriptletToAdg,
     convertAdgToUbo: convertAdgScriptletToUbo,
     redirects: redirectsCjs,
-    Redirects,
 }))();
 
 export default scriptletsObject;
