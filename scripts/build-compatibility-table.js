@@ -2,8 +2,6 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const { ABOUT_SCRIPTLETS_PATH, ABOUT_REDIRECTS_PATH } = require('./build-docs');
-
 /**
  * Source file for compatibility tables
  */
@@ -34,11 +32,7 @@ function getTableData() {
 const getRow = (id, item) => {
     let adgCell = '';
     if (item.adg) {
-        if (id === 'scriptlets') {
-            adgCell = `${ABOUT_SCRIPTLETS_PATH}#${item.adg}`;
-        } else if (id === 'redirects') {
-            adgCell = `${ABOUT_REDIRECTS_PATH}#${item.adg}`;
-        }
+        adgCell = `[${item.adg}](../wiki/about-${id}.md#${item.adg})`;
     }
 
     return `| ${adgCell} | ${item.ubo || ''} | ${item.abp || ''} |${os.EOL}`;

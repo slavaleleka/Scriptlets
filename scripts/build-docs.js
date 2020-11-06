@@ -196,8 +196,6 @@ function init() {
 init();
 
 module.exports = {
-    ABOUT_SCRIPTLETS_PATH,
-    ABOUT_REDIRECTS_PATH,
     redirectsFilesList,
     getDataFromFiles,
 };
