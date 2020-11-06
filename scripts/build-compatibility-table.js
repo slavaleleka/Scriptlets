@@ -2,6 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
+const { ABOUT_SCRIPTLETS_PATH, ABOUT_REDIRECTS_PATH } = require('./build-docs');
+
 /**
  * Source file for compatibility tables
  */
@@ -29,7 +31,18 @@ function getTableData() {
  * abp: string
  * }} item { an }
  */
-const getRow = (item) => (`| ${item.adg || ''} | ${item.ubo || ''} | ${item.abp || ''} |${os.EOL}`);
+const getRow = (id, item) => {
+    let adgCell = '';
+    if (item.adg) {
+        if (id === 'scriptlets') {
+            adgCell = `${ABOUT_SCRIPTLETS_PATH}#${item.adg}`;
+        } else if (id === 'redirects') {
+            adgCell = `${ABOUT_REDIRECTS_PATH}#${item.adg}`;
+        }
+    }
+
+    return `| ${adgCell} | ${item.ubo || ''} | ${item.abp || ''} |${os.EOL}`;
+};
 
 /**
  * Generates table header
@@ -50,7 +63,13 @@ function buildTable(title, data = [], id = '') {
     // header
     res += getTableHeader();
     // rows
-    res += data.map(getRow).join('');
+    // res += data.map(getRow).join('');
+    res += data
+        .map((item) => {
+            const row = getRow(id, item);
+            return row;
+        })
+        .join('');
 
     return res;
 }
