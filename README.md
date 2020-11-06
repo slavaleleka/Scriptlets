@@ -121,7 +121,7 @@ yarn browserstack
 
 #### Scriptlets library
 
-You are welcome to use scriptlets and redirect resources as a CJS module. They can be imported from `dist/cjs/scriptletsCjs.js`:
+You are welcome to use scriptlets and redirect resources as a CJS module. They can be imported from `dist/cjs/scriptlets.cjs.js`:
 
 ```javascript
 const scriptlets = require('scriptlets');
@@ -180,6 +180,7 @@ scriptlets.isAbpSnippetRule(rule);
 */
 scriptlets.convertUboToAdg(rule);
 ```
+> Note that parameters in UBO rule should be separated by comma + space. Otherwise, the rule is not valid.
 
 ```javascript
 /**

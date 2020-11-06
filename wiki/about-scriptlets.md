@@ -1056,6 +1056,9 @@ Creates a constant property and assigns it one of the values from the predefined
 Related UBO scriptlet:
 https://github.com/gorhill/uBlock/wiki/Resources-Library#set-constantjs-
 
+Related ABP snippet:
+https://github.com/adblockplus/adblockpluscore/blob/adblockpluschrome-3.9.4/lib/content/snippets.js#L1361
+
 **Syntax**
 ```
 example.org#%#//scriptlet('set-constant', property, value[, stack])
@@ -1069,6 +1072,8 @@ example.org#%#//scriptlet('set-constant', property, value[, stack])
         - `false`
         - `true`
         - `null`
+        - `emptyObj` - empty object
+        - `emptyArr` - empty array
         - `noopFunc` - function with empty body
         - `trueFunc` - function returning true
         - `falseFunc` - function returning false

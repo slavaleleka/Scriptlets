@@ -1,5 +1,7 @@
 import {
     hit,
+    noopArray,
+    noopObject,
     noopFunc,
     trueFunc,
     falseFunc,
@@ -21,6 +23,9 @@ import {
  * Related UBO scriptlet:
  * https://github.com/gorhill/uBlock/wiki/Resources-Library#set-constantjs-
  *
+ * Related ABP snippet:
+ * https://github.com/adblockplus/adblockpluscore/blob/adblockpluschrome-3.9.4/lib/content/snippets.js#L1361
+ *
  * **Syntax**
  * ```
  * example.org#%#//scriptlet('set-constant', property, value[, stack])
@@ -34,6 +39,8 @@ import {
  *         - `false`
  *         - `true`
  *         - `null`
+ *         - `emptyObj` - empty object
+ *         - `emptyArr` - empty array
  *         - `noopFunc` - function with empty body
  *         - `trueFunc` - function returning true
  *         - `falseFunc` - function returning false
@@ -63,6 +70,9 @@ export function setConstant(source, property, value, stack) {
 
     const nativeIsNaN = Number.isNaN || window.isNaN; // eslint-disable-line compat/compat
 
+    const emptyArr = noopArray();
+    const emptyObj = noopObject();
+
     let constantValue;
     if (value === 'undefined') {
         constantValue = undefined;
@@ -72,6 +82,10 @@ export function setConstant(source, property, value, stack) {
         constantValue = true;
     } else if (value === 'null') {
         constantValue = null;
+    } else if (value === 'emptyArr') {
+        constantValue = emptyArr;
+    } else if (value === 'emptyObj') {
+        constantValue = emptyObj;
     } else if (value === 'noopFunc') {
         constantValue = noopFunc;
     } else if (value === 'trueFunc') {
@@ -163,6 +177,7 @@ setConstant.names = [
     'ubo-set.js',
     'ubo-set-constant',
     'ubo-set',
+    'abp-override-property-read',
 ];
 setConstant.injections = [
     getPropertyInChain,
@@ -170,6 +185,8 @@ setConstant.injections = [
     toRegExp,
     matchStackTrace,
     hit,
+    noopArray,
+    noopObject,
     noopFunc,
     trueFunc,
     falseFunc,

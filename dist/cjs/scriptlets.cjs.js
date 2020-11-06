@@ -1,7 +1,7 @@
 
 /**
  * AdGuard Scriptlets
- * Version 1.3.5
+ * Version 1.3.10
  */
 
 /**
@@ -102,12 +102,16 @@ function getWildcardPropertyInChain(base, chain) {
   if (pos === -1) {
     // for paths like 'a.b.*' every final nested prop should be processed
     if (chain === '*' || chain === '[]') {
-      Object.keys(base).forEach(function (key) {
-        output.push({
-          base: base,
-          prop: key
-        });
-      });
+      // eslint-disable-next-line no-restricted-syntax
+      for (var key in base) {
+        // to process each key in base except inherited ones
+        if (Object.prototype.hasOwnProperty.call(base, key)) {
+          output.push({
+            base: base,
+            prop: key
+          });
+        }
+      }
     } else {
       output.push({
         base: base,
@@ -119,7 +123,7 @@ function getWildcardPropertyInChain(base, chain) {
   }
 
   var prop = chain.slice(0, pos);
-  var shouldLookThrough = (prop === '*' || prop === '[]') && base instanceof Object;
+  var shouldLookThrough = prop === '[]' && Array.isArray(base) || prop === '*' && base instanceof Object;
 
   if (shouldLookThrough) {
     var nextProp = chain.slice(pos + 1);
@@ -285,6 +289,13 @@ function noopThis() {
   return this;
 }
 /**
+ * Function returns empty string
+ */
+
+var noopStr = function noopStr() {
+  return '';
+};
+/**
  * Function returns empty array
  */
 
@@ -292,11 +303,11 @@ var noopArray = function noopArray() {
   return [];
 };
 /**
- * Function returns empty string
+ * Function returns empty object
  */
 
-var noopStr = function noopStr() {
-  return '';
+var noopObject = function noopObject() {
+  return {};
 };
 
 /* eslint-disable no-console, no-underscore-dangle */
@@ -522,8 +533,9 @@ var dependencies = /*#__PURE__*/Object.freeze({
     trueFunc: trueFunc,
     falseFunc: falseFunc,
     noopThis: noopThis,
-    noopArray: noopArray,
     noopStr: noopStr,
+    noopArray: noopArray,
+    noopObject: noopObject,
     hit: hit,
     observeDOMChanges: observeDOMChanges,
     matchStackTrace: matchStackTrace,
@@ -1647,6 +1659,9 @@ abortCurrentInlineScript.injections = [randomId, setPropertyAccess, getPropertyI
  * Related UBO scriptlet:
  * https://github.com/gorhill/uBlock/wiki/Resources-Library#set-constantjs-
  *
+ * Related ABP snippet:
+ * https://github.com/adblockplus/adblockpluscore/blob/adblockpluschrome-3.9.4/lib/content/snippets.js#L1361
+ *
  * **Syntax**
  * ```
  * example.org#%#//scriptlet('set-constant', property, value[, stack])
@@ -1660,6 +1675,8 @@ abortCurrentInlineScript.injections = [randomId, setPropertyAccess, getPropertyI
  *         - `false`
  *         - `true`
  *         - `null`
+ *         - `emptyObj` - empty object
+ *         - `emptyArr` - empty array
  *         - `noopFunc` - function with empty body
  *         - `trueFunc` - function returning true
  *         - `falseFunc` - function returning false
@@ -1691,6 +1708,8 @@ function setConstant(source, property, value, stack) {
 
   var nativeIsNaN = Number.isNaN || window.isNaN; // eslint-disable-line compat/compat
 
+  var emptyArr = noopArray();
+  var emptyObj = noopObject();
   var constantValue;
 
   if (value === 'undefined') {
@@ -1701,6 +1720,10 @@ function setConstant(source, property, value, stack) {
     constantValue = true;
   } else if (value === 'null') {
     constantValue = null;
+  } else if (value === 'emptyArr') {
+    constantValue = emptyArr;
+  } else if (value === 'emptyObj') {
+    constantValue = emptyObj;
   } else if (value === 'noopFunc') {
     constantValue = noopFunc;
   } else if (value === 'trueFunc') {
@@ -1794,8 +1817,8 @@ function setConstant(source, property, value, stack) {
   setChainPropAccess(window, property);
 }
 setConstant.names = ['set-constant', // aliases are needed for matching the related scriptlet converted into our syntax
-'set-constant.js', 'ubo-set-constant.js', 'set.js', 'ubo-set.js', 'ubo-set-constant', 'ubo-set'];
-setConstant.injections = [getPropertyInChain, setPropertyAccess, toRegExp, matchStackTrace, hit, noopFunc, trueFunc, falseFunc];
+'set-constant.js', 'ubo-set-constant.js', 'set.js', 'ubo-set.js', 'ubo-set-constant', 'ubo-set', 'abp-override-property-read'];
+setConstant.injections = [getPropertyInChain, setPropertyAccess, toRegExp, matchStackTrace, hit, noopArray, noopObject, noopFunc, trueFunc, falseFunc];
 
 /* eslint-disable max-len */
 
@@ -3382,31 +3405,38 @@ function jsonPrune(source, propsToRemove, requiredInitialProps, stack) {
       args[_key] = arguments[_key];
     }
 
-    var root = nativeParse.apply(window, args);
+    // call nativeParse as JSON.parse which is bound to JSON object
+    var root = nativeParse.apply(JSON, args);
 
     if (prunePaths.length === 0) {
       log(window.location.hostname, root);
       return root;
     }
 
-    if (isPruningNeeded(root) === false) {
-      return root;
-    } // if pruning is needed, we check every input pathToRemove
-    // and delete it if root has it
+    try {
+      if (isPruningNeeded(root) === false) {
+        return root;
+      } // if pruning is needed, we check every input pathToRemove
+      // and delete it if root has it
 
 
-    prunePaths.forEach(function (path) {
-      var ownerObjArr = getWildcardPropertyInChain(root, path, true);
-      ownerObjArr.forEach(function (ownerObj) {
-        if (ownerObj !== undefined && ownerObj.base) {
-          delete ownerObj.base[ownerObj.prop];
-        }
+      prunePaths.forEach(function (path) {
+        var ownerObjArr = getWildcardPropertyInChain(root, path, true);
+        ownerObjArr.forEach(function (ownerObj) {
+          if (ownerObj !== undefined && ownerObj.base) {
+            delete ownerObj.base[ownerObj.prop];
+            hit(source);
+          }
+        });
       });
-    });
-    hit(source);
+    } catch (e) {
+      log(e.toString());
+    }
+
     return root;
   };
 
+  parseWrapper.toString = nativeParse.toString.bind(nativeParse);
   JSON.parse = parseWrapper;
 }
 jsonPrune.names = ['json-prune', // aliases are needed for matching the related scriptlet converted into our syntax
@@ -3795,7 +3825,7 @@ var scriptletList = /*#__PURE__*/Object.freeze({
     hideInShadowDom: hideInShadowDom
 });
 
-const redirects=[{adg:"1x1-transparent.gif",ubo:"1x1.gif",abp:"1x1-transparent-gif"},{adg:"2x2-transparent.png",ubo:"2x2.png",abp:"2x2-transparent-png"},{adg:"3x2-transparent.png",ubo:"3x2.png",abp:"3x2-transparent-png"},{adg:"32x32-transparent.png",ubo:"32x32.png",abp:"32x32-transparent-png"},{adg:"amazon-apstag",ubo:"amazon_apstag.js"},{adg:"google-analytics",ubo:"google-analytics_analytics.js"},{adg:"google-analytics-ga",ubo:"google-analytics_ga.js"},{adg:"googlesyndication-adsbygoogle",ubo:"googlesyndication_adsbygoogle.js"},{adg:"googletagmanager-gtm",ubo:"googletagmanager_gtm.js"},{adg:"googletagservices-gpt",ubo:"googletagservices_gpt.js"},{adg:"metrika-yandex-watch"},{adg:"metrika-yandex-tag"},{adg:"noeval",ubo:"noeval-silent.js"},{adg:"noopcss",abp:"blank-css"},{adg:"noopframe",ubo:"noop.html",abp:"blank-html"},{adg:"noopjs",ubo:"noop.js",abp:"blank-js"},{adg:"nooptext",ubo:"noop.txt",abp:"blank-text"},{adg:"noopmp3-0.1s",ubo:"noop-0.1s.mp3",abp:"blank-mp3"},{adg:"noopmp4-1s",ubo:"noop-1s.mp4",abp:"blank-mp4"},{adg:"noopvmap-1.0"},{adg:"noopvast-2.0"},{adg:"noopvast-3.0"},{adg:"prevent-fab-3.2.0",ubo:"nofab.js"},{adg:"prevent-popads-net",ubo:"popads.js"},{adg:"scorecardresearch-beacon",ubo:"scorecardresearch_beacon.js"},{adg:"set-popads-dummy",ubo:"popads-dummy.js"},{ubo:"addthis_widget.js"},{ubo:"amazon_ads.js"},{ubo:"ampproject_v0.js"},{ubo:"chartbeat.js"},{ubo:"disqus_embed.js"},{ubo:"disqus_forums_embed.js"},{ubo:"doubleclick_instream_ad_status.js"},{ubo:"empty"},{ubo:"google-analytics_cx_api.js"},{ubo:"google-analytics_inpage_linkid.js"},{ubo:"hd-main.js"},{ubo:"ligatus_angular-tag.js"},{ubo:"monkeybroker.js"},{ubo:"outbrain-widget.js"},{ubo:"window.open-defuser.js"},{ubo:"nobab.js"},{ubo:"noeval.js"}];
+const redirects=[{adg:"1x1-transparent.gif",ubo:"1x1.gif",abp:"1x1-transparent-gif"},{adg:"2x2-transparent.png",ubo:"2x2.png",abp:"2x2-transparent-png"},{adg:"3x2-transparent.png",ubo:"3x2.png",abp:"3x2-transparent-png"},{adg:"32x32-transparent.png",ubo:"32x32.png",abp:"32x32-transparent-png"},{adg:"amazon-apstag",ubo:"amazon_apstag.js"},{adg:"google-analytics",ubo:"google-analytics_analytics.js"},{adg:"google-analytics-ga",ubo:"google-analytics_ga.js"},{adg:"googlesyndication-adsbygoogle",ubo:"googlesyndication_adsbygoogle.js"},{adg:"googletagmanager-gtm",ubo:"googletagmanager_gtm.js"},{adg:"googletagservices-gpt",ubo:"googletagservices_gpt.js"},{adg:"metrika-yandex-watch"},{adg:"metrika-yandex-tag"},{adg:"noeval",ubo:"noeval-silent.js"},{adg:"noopcss",abp:"blank-css"},{adg:"noopframe",ubo:"noop.html",abp:"blank-html"},{adg:"noopjs",ubo:"noop.js",abp:"blank-js"},{adg:"nooptext",ubo:"noop.txt",abp:"blank-text"},{adg:"noopmp3-0.1s",ubo:"noop-0.1s.mp3",abp:"blank-mp3"},{adg:"noopmp4-1s",ubo:"noop-1s.mp4",abp:"blank-mp4"},{adg:"noopvmap-1.0"},{adg:"noopvast-2.0"},{adg:"noopvast-3.0"},{adg:"prevent-fab-3.2.0",ubo:"nofab.js"},{adg:"prevent-popads-net",ubo:"popads.js"},{adg:"scorecardresearch-beacon",ubo:"scorecardresearch_beacon.js"},{adg:"set-popads-dummy",ubo:"popads-dummy.js"},{ubo:"addthis_widget.js"},{ubo:"amazon_ads.js"},{ubo:"ampproject_v0.js"},{ubo:"chartbeat.js"},{ubo:"doubleclick_instream_ad_status.js"},{adg:"empty",ubo:"empty"},{ubo:"google-analytics_cx_api.js"},{ubo:"google-analytics_inpage_linkid.js"},{ubo:"hd-main.js"},{ubo:"ligatus_angular-tag.js"},{ubo:"monkeybroker.js"},{ubo:"outbrain-widget.js"},{ubo:"window.open-defuser.js"},{ubo:"nobab.js"},{ubo:"noeval.js"},{ubo:"click2load.html"}];
 
 var JS_RULE_MARKER = '#%#';
 var COMMENT_MARKER = '!';
@@ -3909,7 +3939,9 @@ var isValidScriptletName = function isValidScriptletName(name) {
 
 var ADG_UBO_REDIRECT_MARKER = 'redirect=';
 var ABP_REDIRECT_MARKER = 'rewrite=abp-resource:';
-var VALID_SOURCE_TYPES = ['image', 'subdocument', 'stylesheet', 'script', 'xmlhttprequest', 'media'];
+var EMPTY_REDIRECT_MARKER = 'empty';
+var VALID_SOURCE_TYPES = ['image', 'media', 'subdocument', 'stylesheet', 'script', 'xmlhttprequest', 'other'];
+var EMPTY_REDIRECT_SUPPORTED_TYPES = ['subdocument', 'stylesheet', 'script', 'xmlhttprequest', 'other'];
 var validAdgRedirects = redirects.filter(function (el) {
   return el.adg;
 });
@@ -4039,6 +4071,11 @@ var isRedirectRuleByType = function isRedirectRuleByType(rule, type) {
 
   if (rule && !isComment(rule) && rule.indexOf(marker) > -1) {
     var redirectName = getRedirectName(rule, marker);
+
+    if (!redirectName) {
+      return false;
+    }
+
     return redirectName === Object.keys(compatibility).find(function (el) {
       return el === redirectName;
     });
@@ -4106,11 +4143,30 @@ var isAbpRedirectCompatibleWithAdg = function isAbpRedirectCompatibleWithAdg(rul
 
 var hasValidContentType = function hasValidContentType(rule) {
   if (isRedirectRuleByType(rule, 'ADG')) {
-    var ruleModifiers = parseModifiers(rule);
-    var sourceType = ruleModifiers.find(function (el) {
+    var ruleModifiers = parseModifiers(rule); // rule can have more than one source type modifier
+
+    var sourceTypes = ruleModifiers.filter(function (el) {
       return VALID_SOURCE_TYPES.indexOf(el) > -1;
     });
-    return sourceType !== undefined;
+    var isSourceTypeSpecified = sourceTypes.length > 0;
+    var isEmptyRedirect = ruleModifiers.indexOf("".concat(ADG_UBO_REDIRECT_MARKER).concat(EMPTY_REDIRECT_MARKER)) > -1;
+
+    if (isEmptyRedirect) {
+      if (isSourceTypeSpecified) {
+        var isValidType = sourceTypes.reduce(function (acc, sType) {
+          var isEmptySupported = EMPTY_REDIRECT_SUPPORTED_TYPES.find(function (type) {
+            return type === sType;
+          });
+          return !!isEmptySupported && acc;
+        }, true);
+        return isValidType;
+      } // no source type for 'empty' is allowed
+
+
+      return true;
+    }
+
+    return isSourceTypeSpecified;
   }
 
   return false;
@@ -4490,13 +4546,19 @@ function GoogleAnalytics(source) {
 
 
     var lastArg = arguments[len - 1];
+    var replacer;
 
-    if (typeof lastArg !== 'object' || lastArg === null || typeof lastArg.hitCallback !== 'function') {
-      return;
+    if (lastArg instanceof Object && lastArg !== null && typeof lastArg.hitCallback === 'function') {
+      replacer = lastArg.hitCallback;
+    } else if (typeof lastArg === 'function') {
+      // https://github.com/AdguardTeam/Scriptlets/issues/98
+      replacer = function replacer() {
+        lastArg(ga.create());
+      };
     }
 
     try {
-      lastArg.hitCallback(); // eslint-disable-next-line no-empty
+      setTimeout(replacer, 1); // eslint-disable-next-line no-empty
     } catch (ex) {}
   }
 

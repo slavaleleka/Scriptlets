@@ -113,7 +113,8 @@
         },
         {
             "adg": "set-constant",
-            "ubo": "set-constant.js (set.js)"
+            "ubo": "set-constant.js (set.js)",
+            "abp": "override-property-read"
         },
         {
             "adg": "set-popads-dummy"
@@ -182,9 +183,6 @@
             "abp": "hide-if-contains-image"
         },
         {
-            "abp": "readd"
-        },
-        {
             "abp": "strip-fetch-query-parameter"
         },
         {
@@ -204,6 +202,18 @@
         },
         {
             "abp": "profile"
+        },
+        {
+            "abp": "freeze-element"
+        },
+        {
+            "ubo": "abort-on-stack-trace.js (aost.js)"
+        },
+        {
+            "abp": "prepareInjection"
+        },
+        {
+            "abp": "commitInjection"
         }
     ],
     "redirects": [
@@ -328,15 +338,10 @@
             "ubo": "chartbeat.js"
         },
         {
-            "ubo": "disqus_embed.js"
-        },
-        {
-            "ubo": "disqus_forums_embed.js"
-        },
-        {
             "ubo": "doubleclick_instream_ad_status.js"
         },
         {
+            "adg": "empty",
             "ubo": "empty"
         },
         {
@@ -365,6 +370,9 @@
         },
         {
             "ubo": "noeval.js"
+        },
+        {
+            "ubo": "click2load.html"
         }
     ]
 }
