@@ -4171,34 +4171,41 @@
 
 
     var hasValidContentType = function hasValidContentType(rule) {
-      if (isRedirectRuleByType(rule, 'ADG')) {
-        var ruleModifiers = parseModifiers(rule); // rule can have more than one source type modifier
-
-        var sourceTypes = ruleModifiers.filter(function (el) {
-          return VALID_SOURCE_TYPES.indexOf(el) > -1;
-        });
-        var isSourceTypeSpecified = sourceTypes.length > 0;
-        var isEmptyRedirect = ruleModifiers.indexOf("".concat(ADG_UBO_REDIRECT_MARKER).concat(EMPTY_REDIRECT_MARKER)) > -1;
-
-        if (isEmptyRedirect) {
-          if (isSourceTypeSpecified) {
-            var isValidType = sourceTypes.reduce(function (acc, sType) {
-              var isEmptySupported = EMPTY_REDIRECT_SUPPORTED_TYPES.find(function (type) {
-                return type === sType;
-              });
-              return !!isEmptySupported && acc;
-            }, true);
-            return isValidType;
-          } // no source type for 'empty' is allowed
-
-
-          return true;
-        }
-
-        return isSourceTypeSpecified;
+      if (!isRedirectRuleByType(rule, 'ADG')) {
+        throw new Error("Unable to convert - not an ADG rule: ".concat(rule));
       }
 
-      return false;
+      if (!isAdgRedirectCompatibleWithUbo(rule)) {
+        throw new Error("Unable to convert - unsupported by uBO redirect in rule: ".concat(rule));
+      } // if (isAdgRedirectCompatibleWithUbo(rule)) {
+      // if (isRedirectRuleByType(rule, 'ADG')) {
+
+
+      var ruleModifiers = parseModifiers(rule); // rule can have more than one source type modifier
+
+      var sourceTypes = ruleModifiers.filter(function (el) {
+        return VALID_SOURCE_TYPES.indexOf(el) > -1;
+      });
+      var isSourceTypeSpecified = sourceTypes.length > 0;
+      var isEmptyRedirect = ruleModifiers.indexOf("".concat(ADG_UBO_REDIRECT_MARKER).concat(EMPTY_REDIRECT_MARKER)) > -1;
+
+      if (isEmptyRedirect) {
+        if (isSourceTypeSpecified) {
+          var isValidType = sourceTypes.reduce(function (acc, sType) {
+            var isEmptySupported = EMPTY_REDIRECT_SUPPORTED_TYPES.find(function (type) {
+              return type === sType;
+            });
+            return !!isEmptySupported && acc;
+          }, true);
+          return isValidType;
+        } // no source type for 'empty' is allowed
+
+
+        return true;
+      }
+
+      return isSourceTypeSpecified; // }
+      // return false;
     };
 
     var validator = {
