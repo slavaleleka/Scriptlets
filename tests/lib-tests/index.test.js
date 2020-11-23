@@ -279,4 +279,14 @@ test('Test REDIRECT converting - ADG -> UBO', (assert) => {
     adgRule = '||example.com/vast/$important,redirect=empty,~thirt-party';
     expectedUboRule = '||example.com/vast/$important,redirect=empty,~thirt-party';
     assert.strictEqual(convertAdgRedirectToUbo(adgRule), expectedUboRule);
+
+    // assert.throws(() => {
+    //     adgRule = '||example.com/ad/vmap/*$xmlhttprequest,redirect=noopvast-2.0';
+    //     convertAdgRedirectToUbo(adgRule);
+    // }, 'unable to convert -- no such ubo redirect');
+
+    assert.throws(() => {
+        adgRule = '||example.com/ad/vmap/*$redirect=nooptext';
+        convertAdgRedirectToUbo(adgRule);
+    }, 'unable to convert -- no source type specified');
 });

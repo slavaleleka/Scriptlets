@@ -4197,8 +4197,7 @@
 
         return isSourceTypeSpecified;
       }
-
-      return false;
+      return false; // throw new Error(`Unsupported Redirect in rule: ${rule}`);
     };
 
     var validator = {

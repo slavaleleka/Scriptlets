@@ -371,7 +371,9 @@ const hasValidContentType = (rule) => {
 
         return isSourceTypeSpecified;
     }
-    throw new Error(`Redirect might be unsupported by Ubo so rule can not be converted: ${rule}`);
+
+    return false;
+    // throw new Error(`Unsupported Redirect in rule: ${rule}`);
 };
 
 const validator = {
