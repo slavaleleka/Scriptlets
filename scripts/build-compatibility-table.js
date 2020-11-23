@@ -57,7 +57,6 @@ function buildTable(title, data = [], id = '') {
     // header
     res += getTableHeader();
     // rows
-    // res += data.map(getRow).join('');
     res += data
         .map((item) => {
             const row = getRow(id, item);
