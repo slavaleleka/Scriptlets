@@ -221,7 +221,7 @@ body:
       description: |
         0. DO NOT upload screenshots with sexually explicit material щт GitHub directly. Instead, upload it to third-party image hosting and post URL here;
         1. Please add screenshots of the problem. You can attach images by clicking this area to highlight it and then dragging files in or paste images from clipboard;
-           Use `<details> </details>` tag to hide screenshots under the spoiler; 
+           Use `<details> </details>` tag to hide screenshots under the spoiler;
         2. Please describe the issue extensively unless it is absolutely clear from the screenshot what the problem is;
         You can also indicate any other information that you think the developers should know.
 
@@ -229,16 +229,16 @@ body:
       placeholder: |
         1. Your comment
         2. Screenshots
-        <details> 
-        
-        paste screenshot here
-        
-        </details>
-        
         <details>
-        
+
         paste screenshot here
-        
+
+        </details>
+
+        <details>
+
+        paste screenshot here
+
         </details>
     validations:
       required: true
@@ -251,4 +251,3 @@ body:
       options:
         - label: I agree to follow this condition
           required: true
-

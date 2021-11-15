@@ -11,7 +11,7 @@ body:
         To avoid invalid reports, please check and confirm following checkboxes.
         It is highly recommended to use our [Web Reporting Tool](https://kb.adguard.com/en/technical-support/reporting-tool) instead or opening an issue using GitHub directly.
       options:
-        - label: This site DOES NOT contains sexually explicit material;
+        - label: This site DOES NOT contains sexually explicit material, otherwise use [NSFW-specific form](../new?template=bug_report_NSFW.yml);
           required: true
         - label: Filters were updated before redroduced an issue;
           required: true
@@ -222,7 +222,7 @@ body:
       label: Add your comment and screenshots
       description: |
         1. Please add screenshots of the problem. You can attach images by clicking this area to highlight it and then dragging files in or paste images from clipboard;
-           Use `<details> </details>` tag to hide screenshots under the spoiler; 
+           Use `<details> </details>` tag to hide screenshots under the spoiler;
         2. Please describe the issue extensively unless it is absolutely clear from the screenshot what the problem is;
         You can also indicate any other information that you think the developers should know.
 
@@ -230,16 +230,16 @@ body:
       placeholder: |
         1. Your comment
         2. Screenshots
-        <details> 
-        
-        paste screenshot here
-        
-        </details>
-        
         <details>
-        
+
         paste screenshot here
-        
+
+        </details>
+
+        <details>
+
+        paste screenshot here
+
         </details>
     validations:
       required: true
@@ -252,4 +252,3 @@ body:
       options:
         - label: I agree to follow this condition
           required: true
-
