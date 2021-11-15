@@ -1,16 +1,16 @@
 name: Bug report
 description: Report an issue with filters
-title: "[Report]: <title>"
-labels: ["pending triage"]
+labels: ["Unsorted"]
+# labels: ["A: Bug", "A: By Design", "A: Cannot reproduce", "A: Closed", "A: In progress", "A: Invalid", "A: Problematic", "A: Rejected", "A: Resolved", "A: Won't fix", "Extra", "Extra (zmc)", "Infrastructure", "N: AdGuard Browser Extension", "N: AdGuard Content Blocker", "N: AdGuard DNS", "N: AdGuard for Android", "N: AdGuard for iOS", "N: AdGuard for Mac", "N: AdGuard for Safari", "N: AdGuard for Windows", "N: Other", "NSFW", "P1: Critical", "P2: High", "P3: Medium", "P4: Low", "T: Ads", "T: Annoyance", "T: Anti Adblock Script", "T: Incorrect Blocking", "T: Popups", "T: Social Widget", "T: Stealth Mode issue", "T: Tracker"]
 body:
   - type: checkboxes
     attributes:
       label: Prerequisites
       description: |
         To avoid invalid reports, please check and confirm following checkboxes.
-        It is highly recommended to use our [Web Reporting Tool](https://kb.adguard.com/en/technical-support/reporting-tool) instead or opening an issue using GitHub directly.
+        It is highly recommended to use our [Web Reporting Tool](https://kb.adguard.com/en/technical-support/reporting-tool) instead of opening an issue using GitHub directly.
       options:
-        - label: This site DOES NOT contains sexually explicit material, otherwise use [NSFW-specific form](./new?template=bug_report_NSFW.yml);
+        - label: This site DOES NOT contains sexually explicit material, otherwise use [NSFW-specific form](./new?template=bug_report_NSFW.yml);;
           required: true
         - label: Filters were updated before reproduced an issue;
           required: true
@@ -43,7 +43,7 @@ body:
     attributes:
       label: AdGuard version
       description: What version of our software are you running?
-      placeholder: ex. 7.7
+      placeholder: for example, 7.7.2, 2.6.1.1060 nightly, 3.6.14 beta
     validations:
       required: true
 
@@ -102,12 +102,13 @@ body:
       required: true
 
   - type: dropdown
-    id: agfilters
+    id: filters
     attributes:
-      label: What AdGuard filters do you have enabled?
-      description: Select AdGuard enabled filters from the list.
+      label: What filters do you have enabled?
+      description: Select enabled filters from the list or enter URLs of any custom filters in comment below.
       multiple: true
       options:
+        - ---AdGuard filters---
         - AdGuard Base filter
         - AdGuard Mobile Ads filter
         - AdGuard Dutch filter
@@ -124,16 +125,7 @@ body:
         - AdGuard DNS filter
         - AdGuard Experimental filter
         - Filter unblocking search ads and self-promotion
-    validations:
-      required: true
-
-  - type: dropdown
-    id: thirdpartyfilters
-    attributes:
-      label: What third-party filters do you have enabled?
-      description: Select enabled third-party filters from the list.
-      multiple: true
-      options:
+        - ---Third-party filters---
         - EasyList
         - ABPindo
         - Bulgarian list
@@ -201,18 +193,7 @@ body:
         - Dandelion Sprout's Annoyances List
         - Legitimate URL Shortener
     validations:
-      required: false
-
-  - type: textarea
-    id: customfilters
-    attributes:
-      label: Custom filters
-      description: |
-        Enter custom filters URLs if you use them
-      placeholder: |
-        enter custom filters URLs
-    validations:
-      required: false
+      required: true
 
   - type: dropdown
     id: stealth
@@ -247,7 +228,6 @@ body:
         Warning: Please remove private info before upload screenshots!
       value: |
         1. <comment>
-
         2. Screenshots
         <details>
 
@@ -261,8 +241,6 @@ body:
         <!-- paste screenshot here -->
 
         </details>
-
-
     validations:
       required: true
 
