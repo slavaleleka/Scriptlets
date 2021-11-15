@@ -105,7 +105,7 @@ body:
     id: agfilters
     attributes:
       label: What AdGuard filters do you have enabled?
-      description: Select enabled filters from the list.
+      description: Select AdGuard enabled filters from the list.
       multiple: true
       options:
         - AdGuard Base filter
@@ -131,7 +131,7 @@ body:
     id: thirdpartyfilters
     attributes:
       label: What third-party filters do you have enabled?
-      description: Select enabled filters from the list.
+      description: Select enabled third-party filters from the list.
       multiple: true
       options:
         - EasyList
