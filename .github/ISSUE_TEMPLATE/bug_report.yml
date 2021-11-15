@@ -1,8 +1,7 @@
 name: Bug report
 description: Report an issue with filters
 title: "[Report]: <title>"
-labels: ["N: Other"]
-# labels: ["A: Bug", "A: By Design", "A: Cannot reproduce", "A: Closed", "A: In progress", "A: Invalid", "A: Problematic", "A: Rejected", "A: Resolved", "A: Won't fix", "Extra", "Extra (zmc)", "Infrastructure", "N: AdGuard Browser Extension", "N: AdGuard Content Blocker", "N: AdGuard DNS", "N: AdGuard for Android", "N: AdGuard for iOS", "N: AdGuard for Mac", "N: AdGuard for Safari", "N: AdGuard for Windows", "N: Other", "NSFW", "P1: Critical", "P2: High", "P3: Medium", "P4: Low", "T: Ads", "T: Annoyance", "T: Anti Adblock Script", "T: Incorrect Blocking", "T: Popups", "T: Social Widget", "T: Stealth Mode issue", "T: Tracker"]
+labels: ["pending triage"]
 body:
   - type: checkboxes
     attributes:
@@ -13,7 +12,7 @@ body:
       options:
         - label: This site DOES NOT contains sexually explicit material, otherwise use [NSFW-specific form](./new?template=bug_report_NSFW.yml);
           required: true
-        - label: Filters were updated before redroduced an issue;
+        - label: Filters were updated before reproduced an issue;
           required: true
         - label: AdGuard product version is up-to-date;
           required: true
@@ -129,7 +128,7 @@ body:
       required: true
 
   - type: dropdown
-    id: thirdpatryfilters
+    id: thirdpartyfilters
     attributes:
       label: What third-party filters do you have enabled?
       description: Select enabled filters from the list.
@@ -212,7 +211,6 @@ body:
         Enter custom filters URLs if you use them
       placeholder: |
         enter custom filters URLs
-
     validations:
       required: false
 
