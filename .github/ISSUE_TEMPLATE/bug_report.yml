@@ -109,7 +109,7 @@ body:
       description: Select enabled filters from the list or enter URLs of any custom filters in comment below.
       multiple: true
       options:
-        ---AdGuard filters---
+        - ---AdGuard filters---
         - AdGuard Base filter
         - AdGuard Mobile Ads filter
         - AdGuard Dutch filter
@@ -126,7 +126,7 @@ body:
         - AdGuard DNS filter
         - AdGuard Experimental filter
         - Filter unblocking search ads and self-promotion
-        ---Third-party filters---
+        - ---Third-party filters---
         - EasyList
         - ABPindo
         - Bulgarian list
