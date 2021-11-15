@@ -204,6 +204,18 @@ body:
     validations:
       required: false
 
+  - type: textarea
+    id: customfilters
+    attributes:
+      label: Custom filters
+      description: |
+        Enter custom filters URLs if you use them
+      placeholder: |
+        enter custom filters URLs
+
+    validations:
+      required: false
+
   - type: dropdown
     id: stealth
     attributes:
