@@ -11,7 +11,7 @@ body:
         To avoid invalid reports, please check and confirm following checkboxes.
         It is highly recommended to use our [Web Reporting Tool](https://kb.adguard.com/en/technical-support/reporting-tool) instead or opening an issue using GitHub directly.
       options:
-        - label: This site DOES NOT contains sexually explicit material, otherwise use [NSFW-specific form](../new?template=bug_report_NSFW.yml);
+        - label: This site DOES NOT contains sexually explicit material, otherwise use [NSFW-specific form](/new?template=bug_report_NSFW.yml);
           required: true
         - label: Filters were updated before redroduced an issue;
           required: true
