@@ -103,13 +103,12 @@ body:
       required: true
 
   - type: dropdown
-    id: filters
+    id: agfilters
     attributes:
-      label: What filters do you have enabled?
-      description: Select enabled filters from the list or enter URLs of any custom filters in comment below.
+      label: What AdGuard filters do you have enabled?
+      description: Select enabled filters from the list.
       multiple: true
       options:
-        - ---AdGuard filters---
         - AdGuard Base filter
         - AdGuard Mobile Ads filter
         - AdGuard Dutch filter
@@ -126,7 +125,16 @@ body:
         - AdGuard DNS filter
         - AdGuard Experimental filter
         - Filter unblocking search ads and self-promotion
-        - ---Third-party filters---
+    validations:
+      required: true
+
+  - type: dropdown
+    id: thirdpatryfilters
+    attributes:
+      label: What third-party filters do you have enabled?
+      description: Select enabled filters from the list.
+      multiple: true
+      options:
         - EasyList
         - ABPindo
         - Bulgarian list
@@ -194,7 +202,7 @@ body:
         - Dandelion Sprout's Annoyances List
         - Legitimate URL Shortener
     validations:
-      required: true
+      required: false
 
   - type: dropdown
     id: stealth
