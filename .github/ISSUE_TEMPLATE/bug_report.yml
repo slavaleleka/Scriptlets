@@ -241,22 +241,22 @@ body:
         paste screenshot here
 
         </details>
-value: |
-  1. <comment>
+      value: |
+        1. <comment>
 
-  2. Screenshots
-  <details>
+        2. Screenshots
+        <details>
 
-  <!-- paste screenshot here -->
+        <!-- paste screenshot here -->
 
-  </details>
+        </details>
 
 
-  <details>
+        <details>
 
-  <!-- paste screenshot here -->
+        <!-- paste screenshot here -->
 
-  </details>
+        </details>
 
 
     validations:
