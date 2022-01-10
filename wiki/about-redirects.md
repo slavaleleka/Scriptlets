@@ -11,21 +11,28 @@
 * [noopvmap-1.0](#noopvmap-1.0)
 * [noopvast-2.0](#noopvast-2.0)
 * [noopvast-3.0](#noopvast-3.0)
+* [noopvast-4.0](#noopvast-4.0)
 * [noopmp3-0.1s](#noopmp3-0.1s)
 * [noopmp4-1s](#noopmp4-1s)
 * [amazon-apstag](#amazon-apstag)
+* [ati-smarttag](#ati-smarttag)
+* [fingerprintjs](#fingerprintjs)
+* [gemius](#gemius)
 * [google-analytics-ga](#google-analytics-ga)
 * [google-analytics](#google-analytics)
 * [googlesyndication-adsbygoogle](#googlesyndication-adsbygoogle)
-* [googletagmanager-gtm](#googletagmanager-gtm)
 * [googletagservices-gpt](#googletagservices-gpt)
+* [matomo](#matomo)
 * [metrika-yandex-tag](#metrika-yandex-tag)
 * [metrika-yandex-watch](#metrika-yandex-watch)
 * [noeval](#noeval)
+* [prevent-bab](#prevent-bab)
+* [prevent-bab2](#prevent-bab2)
 * [prevent-fab-3.2.0](#prevent-fab-3.2.0)
 * [prevent-popads-net](#prevent-popads-net)
 * [scorecardresearch-beacon](#scorecardresearch-beacon)
 * [set-popads-dummy](#set-popads-dummy)
+* [click2load.html](#click2load.html)
 * * *
 ### <a id="1x1-transparent.gif"></a> ⚡️ 1x1-transparent.gif
 **Example**
@@ -112,7 +119,7 @@ Redirects request to an empty VMAP response.
 * * *
 
 ### <a id="noopvast-2.0"></a> ⚡️ noopvast-2.0
-Redirects request to an empty VAST response.
+Redirects request to an empty VAST 2.0 response.
 
 **Example**
 ```
@@ -122,11 +129,21 @@ Redirects request to an empty VAST response.
 * * *
 
 ### <a id="noopvast-3.0"></a> ⚡️ noopvast-3.0
-Redirects request to an empty VAST response.
+Redirects request to an empty VAST 3.0 response.
 
 **Example**
 ```
 ||example.org/vast03.xml^$xmlhttprequest,redirect=noopvast-3.0
+```
+[Redirect source](../src/redirects/static-redirects.yml)
+* * *
+
+### <a id="noopvast-4.0"></a> ⚡️ noopvast-4.0
+Redirects request to an empty VAST 4.0 response.
+
+**Example**
+```
+||example.org/vast04.xml^$xmlhttprequest,redirect=noopvast-4.0
 ```
 [Redirect source](../src/redirects/static-redirects.yml)
 * * *
@@ -158,7 +175,50 @@ https://github.com/gorhill/uBlock/blob/f842ab6d3c1cf0394f95d27092bf59627262da40/
 ```
 ||amazon-adsystem.com/aax2/apstag.js$script,redirect=amazon-apstag
 ```
+
 [Redirect source](../src/redirects/amazon-apstag.js)
+* * *
+
+### <a id="ati-smarttag"></a> ⚡️ ati-smarttag
+
+Mocks AT Internat SmartTag.
+https://developers.atinternet-solutions.com/as2-tagging-en/javascript-en/getting-started-javascript-en/tracker-initialisation-javascript-en/
+
+**Example**
+```
+||bloctel.gouv.fr/assets/scripts/smarttag.js$script,redirect=ati-smarttag
+```
+
+[Redirect source](../src/redirects/ati-smarttag.js)
+* * *
+
+### <a id="fingerprintjs"></a> ⚡️ fingerprintjs
+
+Mocks FingerprintJS.
+https://github.com/fingerprintjs
+
+Related UBO redirect resource:
+https://github.com/gorhill/uBlock/commit/33a18c3a1eb101470c43979a41d8adef3e21208d
+
+**Example**
+```
+||the-japan-news.com/modules/js/lib/fgp/fingerprint2.js$script,redirect=fingerprintjs
+```
+
+[Redirect source](../src/redirects/fingerprintjs.js)
+* * *
+
+### <a id="gemius"></a> ⚡️ gemius
+
+Mocks Gemius Analytics.
+https://flowplayer.com/developers/plugins/gemius
+
+**Example**
+```
+||gapt.hit.gemius.pl/gplayer.js$script,redirect=gemius
+```
+
+[Redirect source](../src/redirects/gemius.js)
 * * *
 
 ### <a id="google-analytics-ga"></a> ⚡️ google-analytics-ga
@@ -172,20 +232,24 @@ https://github.com/gorhill/uBlock/blob/a94df7f3b27080ae2dcb3b914ace39c0c294d2f6/
 ```
 ||google-analytics.com/ga.js$script,redirect=google-analytics-ga
 ```
+
 [Redirect source](../src/redirects/google-analytics-ga.js)
 * * *
 
 ### <a id="google-analytics"></a> ⚡️ google-analytics
 
-Mocks Google Analytics API.
+Mocks Google's Analytics and Tag Manager APIs.
+[Covers obsolete googletagmanager-gtm redirect functionality](https://github.com/AdguardTeam/Scriptlets/issues/127).
 
 Related UBO redirect resource:
-https://github.com/gorhill/uBlock/blob/a94df7f3b27080ae2dcb3b914ace39c0c294d2f6/src/web_accessible_resources/google-analytics_analytics.js
+https://github.com/gorhill/uBlock/blob/8cd2a1d263a96421487b39040c1d23eb01169484/src/web_accessible_resources/google-analytics_analytics.js
 
 **Example**
 ```
 ||google-analytics.com/analytics.js$script,redirect=google-analytics
+||googletagmanager.com/gtm.js$script,redirect=googletagmanager-gtm
 ```
+
 [Redirect source](../src/redirects/google-analytics.js)
 * * *
 
@@ -200,21 +264,8 @@ https://github.com/gorhill/uBlock/blob/a94df7f3b27080ae2dcb3b914ace39c0c294d2f6/
 ```
 ||pagead2.googlesyndication.com/pagead/js/adsbygoogle.js$script,redirect=googlesyndication-adsbygoogle
 ```
+
 [Redirect source](../src/redirects/googlesyndication-adsbygoogle.js)
-* * *
-
-### <a id="googletagmanager-gtm"></a> ⚡️ googletagmanager-gtm
-
-Mocks Google Tag Manager API.
-
-Related UBO redirect resource:
-https://github.com/gorhill/uBlock/blob/a94df7f3b27080ae2dcb3b914ace39c0c294d2f6/src/web_accessible_resources/googletagmanager_gtm.js
-
-**Example**
-```
-||googletagmanager.com/gtm.js$script,redirect=googletagmanager-gtm
-```
-[Redirect source](../src/redirects/googletagmanager-gtm.js)
 * * *
 
 ### <a id="googletagservices-gpt"></a> ⚡️ googletagservices-gpt
@@ -228,7 +279,20 @@ https://github.com/gorhill/uBlock/blob/a94df7f3b27080ae2dcb3b914ace39c0c294d2f6/
 ```
 ||googletagservices.com/tag/js/gpt.js$script,redirect=googletagservices-gpt
 ```
+
 [Redirect source](../src/redirects/googletagservices-gpt.js)
+* * *
+
+### <a id="matomo"></a> ⚡️ matomo
+
+Mocks the piwik.js file of Matomo (formerly Piwik).
+
+**Example**
+```
+||example.org/piwik.js$script,redirect=matomo
+```
+
+[Redirect source](../src/redirects/matomo.js)
 * * *
 
 ### <a id="metrika-yandex-tag"></a> ⚡️ metrika-yandex-tag
@@ -240,6 +304,7 @@ https://yandex.ru/support/metrica/objects/method-reference.html
 ```
 ||mc.yandex.ru/metrika/tag.js$script,redirect=metrika-yandex-tag
 ```
+
 [Redirect source](../src/redirects/metrika-yandex-tag.js)
 * * *
 
@@ -252,6 +317,7 @@ https://yandex.ru/support/metrica/objects/_method-reference.html
 ```
 ||mc.yandex.ru/metrika/watch.js$script,redirect=metrika-yandex-watch
 ```
+
 [Redirect source](../src/redirects/metrika-yandex-watch.js)
 * * *
 
@@ -272,7 +338,43 @@ https://github.com/gorhill/uBlock/wiki/Resources-Library#noeval-silentjs-
 ```
 ||example.org/index.js$script,redirect=noeval
 ```
+
 [Redirect source](../src/redirects/noeval.js)
+* * *
+
+### <a id="prevent-bab"></a> ⚡️ prevent-bab
+
+Prevents BlockAdblock script from detecting an ad blocker.
+
+Mostly it is used as `scriptlet`.
+See [scriptlet description](../wiki/about-scriptlets.md#prevent-bab).
+
+Related UBO redirect resource:
+https://github.com/gorhill/uBlock/blob/a94df7f3b27080ae2dcb3b914ace39c0c294d2f6/src/web_accessible_resources/nobab.js
+
+**Example**
+```
+/blockadblock.$script,redirect=prevent-bab
+```
+
+[Redirect source](../src/redirects/prevent-bab.js)
+* * *
+
+### <a id="prevent-bab2"></a> ⚡️ prevent-bab2
+
+Prevents BlockAdblock script from detecting an ad blocker.
+
+Related UBO redirect:
+https://github.com/gorhill/uBlock/blob/master/src/web_accessible_resources/nobab2.js
+
+See [redirect description](../wiki/about-redirects.md#prevent-bab2).
+
+**Syntax**
+```
+/blockadblock.$script,redirect=prevent-bab2
+```
+
+[Redirect source](../src/redirects/prevent-bab2.js)
 * * *
 
 ### <a id="prevent-fab-3.2.0"></a> ⚡️ prevent-fab-3.2.0
@@ -283,6 +385,7 @@ Redirects fuckadblock script to the source js file.
 ```
 \*\/fuckadblock-$script,redirect=prevent-fab-3.2.0
 ```
+
 [Redirect source](../src/redirects/prevent-fab-3.2.0.js)
 * * *
 
@@ -294,6 +397,7 @@ Redirects request to the source which sets static properties to PopAds and popns
 ```
 ||popads.net/pop.js$script,redirect=prevent-popads-net
 ```
+
 [Redirect source](../src/redirects/prevent-popads-net.js)
 * * *
 
@@ -308,6 +412,7 @@ https://github.com/gorhill/uBlock/blob/a94df7f3b27080ae2dcb3b914ace39c0c294d2f6/
 ```
 ||sb.scorecardresearch.com/beacon.js$script,redirect=scorecardresearch-beacon
 ```
+
 [Redirect source](../src/redirects/scorecardresearch-beacon.js)
 * * *
 
@@ -319,6 +424,19 @@ Redirects request to the source which sets static properties to PopAds and popns
 ```
 ||popads.net^$script,redirect=set-popads-dummy,domain=example.org
 ```
+
 [Redirect source](../src/redirects/set-popads-dummy.js)
 * * *
 
+### <a id="click2load.html"></a> ⚡️ click2load.html
+Redirects resource and replaces supposed content by decoy frame with button for original content recovering
+
+Related UBO redirect resource:
+https://github.com/gorhill/uBlock/blob/1.31.0/src/web_accessible_resources/click2load.html
+
+**Example**
+```
+||youtube.com/embed/$frame,third-party,redirect=click2load.html
+```
+[Redirect source](../src/redirects/blocking-redirects/click2load.html)
+* * *
