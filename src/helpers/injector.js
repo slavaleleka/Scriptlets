@@ -6,6 +6,7 @@ import * as dependencies from '.';
  */
 export function attachDependencies(scriptlet) {
     const { injections = [] } = scriptlet;
+    // eslint-disable-next-line max-len
     return injections.reduce((accum, dep) => `${accum}\n${dependencies[dep.name]}`, scriptlet.toString());
 }
 
@@ -17,7 +18,11 @@ export function attachDependencies(scriptlet) {
 export function addCall(scriptlet, code) {
     return `${code};
         const updatedArgs = args ? [].concat(source).concat(args) : [source];
-        ${scriptlet.name}.apply(this, updatedArgs);
+        try {
+            ${scriptlet.name}.apply(this, updatedArgs);
+        } catch (e) {
+            console.log(e);
+        }
     `;
 }
 

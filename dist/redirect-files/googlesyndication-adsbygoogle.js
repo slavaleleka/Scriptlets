@@ -1,10 +1,14 @@
 (function(source, args){
 function GoogleSyndicationAdsByGoogle(source) {
     window.adsbygoogle = {
-      length: 0,
+      // https://github.com/AdguardTeam/Scriptlets/issues/113
+      // length: 0,
       loaded: true,
       push: function push() {
-        this.length += 1;
+        if (typeof this.length === 'undefined') {
+          this.length = 0;
+          this.length += 1;
+        }
       }
     };
     var adElems = document.querySelectorAll('.adsbygoogle');
@@ -17,7 +21,7 @@ function GoogleSyndicationAdsByGoogle(source) {
     for (var i = 0; i < adElems.length; i += 1) {
       var adElemChildNodes = adElems[i].childNodes;
       var childNodesQuantity = adElemChildNodes.length; // childNodes of .adsbygoogle can be defined if scriptlet was executed before
-      // so we should check are that childNodes exactly defined by us
+      // so we should check that childNodes are exactly defined by us
       // TODO: remake after scriptlets context developing in 1.3
 
       var areIframesDefined = false;
@@ -25,21 +29,21 @@ function GoogleSyndicationAdsByGoogle(source) {
       if (childNodesQuantity > 0) {
         // it should be only 2 child iframes if scriptlet was executed
         areIframesDefined = childNodesQuantity === 2 // the first of child nodes should be aswift iframe
-        && adElemChildNodes[0].tagName.toLowerCase() === 'iframe' && adElemChildNodes[0].id.indexOf(ASWIFT_IFRAME_MARKER) > -1 // the second of child nodes should be google_ads iframe
-        && adElemChildNodes[1].tagName.toLowerCase() === 'iframe' && adElemChildNodes[1].id.indexOf(GOOGLE_ADS_IFRAME_MARKER) > -1;
+        && adElemChildNodes[0].nodeName.toLowerCase() === 'iframe' && adElemChildNodes[0].id.indexOf(ASWIFT_IFRAME_MARKER) > -1 // the second of child nodes should be google_ads iframe
+        && adElemChildNodes[1].nodeName.toLowerCase() === 'iframe' && adElemChildNodes[1].id.indexOf(GOOGLE_ADS_IFRAME_MARKER) > -1;
       }
 
       if (!areIframesDefined) {
         // here we do the job if scriptlet has not been executed earlier
         adElems[i].setAttribute(statusAttrName, 'done');
         var aswiftIframe = document.createElement('iframe');
-        aswiftIframe.id = "".concat(ASWIFT_IFRAME_MARKER).concat(i + 1);
+        aswiftIframe.id = "".concat(ASWIFT_IFRAME_MARKER).concat(i);
         aswiftIframe.style = css;
         adElems[i].appendChild(aswiftIframe);
         var innerAswiftIframe = document.createElement('iframe');
         aswiftIframe.contentWindow.document.body.appendChild(innerAswiftIframe);
         var googleadsIframe = document.createElement('iframe');
-        googleadsIframe.id = "".concat(GOOGLE_ADS_IFRAME_MARKER).concat(i + 1);
+        googleadsIframe.id = "".concat(GOOGLE_ADS_IFRAME_MARKER).concat(i);
         googleadsIframe.style = css;
         adElems[i].appendChild(googleadsIframe);
         var innerGoogleadsIframe = document.createElement('iframe');
@@ -59,7 +63,8 @@ function hit(source, message) {
 
     try {
       var log = console.log.bind(console);
-      var trace = console.trace.bind(console);
+      var trace = console.trace.bind(console); // eslint-disable-line compat/compat
+
       var prefix = source.ruleText || '';
 
       if (source.domainName) {
@@ -108,6 +113,10 @@ function hit(source, message) {
     }
   };
         const updatedArgs = args ? [].concat(source).concat(args) : [source];
-        GoogleSyndicationAdsByGoogle.apply(this, updatedArgs);
+        try {
+            GoogleSyndicationAdsByGoogle.apply(this, updatedArgs);
+        } catch (e) {
+            console.log(e);
+        }
     
 })({"name":"googlesyndication-adsbygoogle","args":[]}, []);

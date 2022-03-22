@@ -1,5 +1,11 @@
 import {
-    hit, startsWith, toRegExp, noopFunc,
+    hit,
+    noopFunc,
+    parseMatchArg,
+    validateStrPattern,
+    // following helpers are needed for helpers above
+    toRegExp,
+    startsWith,
 } from '../helpers';
 
 /* eslint-disable max-len */
@@ -19,7 +25,7 @@ import {
  * example.org#%#//scriptlet('prevent-requestAnimationFrame'[, search])
  * ```
  *
- * - `search` - optional, string or regular expression.
+ * - `search` - optional, string or regular expression; invalid regular expression will be skipped and all callbacks will be matched.
  * If starts with `!`, scriptlet will not match the stringified callback but all other will be defused.
  * If do not start with `!`, the stringified callback will be matched.
  *
@@ -78,22 +84,15 @@ export function preventRequestAnimationFrame(source, match) {
     // logs requestAnimationFrame to console if no arguments have been specified
     const shouldLog = typeof match === 'undefined';
 
-    const INVERT_MARKER = '!';
-
-    const doNotMatch = startsWith(match, INVERT_MARKER);
-    if (doNotMatch) {
-        match = match.slice(1);
-    }
-
-    match = match ? toRegExp(match) : toRegExp('/.?/');
+    const { isInvertedMatch, matchRegexp } = parseMatchArg(match);
 
     const rafWrapper = (callback, ...args) => {
         let shouldPrevent = false;
         if (shouldLog) {
             const logMessage = `log: requestAnimationFrame("${callback.toString()}")`;
             hit(source, logMessage);
-        } else {
-            shouldPrevent = match.test(callback.toString()) !== doNotMatch;
+        } else if (validateStrPattern(match)) {
+            shouldPrevent = matchRegexp.test(callback.toString()) !== isInvertedMatch;
         }
 
         if (shouldPrevent) {
@@ -118,4 +117,11 @@ preventRequestAnimationFrame.names = [
     'ubo-norafif',
 ];
 
-preventRequestAnimationFrame.injections = [hit, startsWith, toRegExp, noopFunc];
+preventRequestAnimationFrame.injections = [
+    hit,
+    noopFunc,
+    parseMatchArg,
+    validateStrPattern,
+    toRegExp,
+    startsWith,
+];

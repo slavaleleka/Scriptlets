@@ -1,5 +1,5 @@
 {
-  "extends": "airbnb-base",
+  "extends": ["airbnb-base", "plugin:compat/recommended"],
   "rules": {
     "indent": ["error", 4],
     "no-param-reassign": "off",
@@ -11,5 +11,6 @@
   "env": {
     "browser": true,
     "qunit": true
-  }
+  },
+  "parser": "@babel/eslint-parser"
 }

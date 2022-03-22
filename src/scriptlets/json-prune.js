@@ -1,5 +1,10 @@
 import {
-    hit, toRegExp, matchStackTrace, getWildcardPropertyInChain,
+    hit,
+    matchStackTrace,
+    getWildcardPropertyInChain,
+    // following helpers are needed for helpers above
+    toRegExp,
+    getWildcardSymbol,
 } from '../helpers';
 
 /* eslint-disable max-len */
@@ -22,7 +27,8 @@ import {
  *
  * - `propsToRemove` - optional, string of space-separated properties to remove
  * - `obligatoryProps` - optional, string of space-separated properties which must be all present for the pruning to occur
- * - `stack` - optional, string or regular expression that must match the current function call stack trace
+ * - `stack` - optional, string or regular expression that must match the current function call stack trace;
+ * if regular expression is invalid it will be skipped
  *
  * > Note please that you can use wildcard `*` for chain property name.
  * e.g. 'ad.*.src' instead of 'ad.0.src ad.1.src ad.2.src ...'
@@ -56,7 +62,7 @@ import {
  *     example.org#%#//scriptlet('json-prune', 'a.b', 'adpath.url.first')
  *     ```
  *
- * 4. Removes property `content.ad` from the results of JSON.parse call it's error stack trace contains `test.js`
+ * 4. Removes property `content.ad` from the results of JSON.parse call if its error stack trace contains `test.js`
  *     ```
  *     example.org#%#//scriptlet('json-prune', 'content.ad', '', 'test.js')
  *     ```
@@ -74,8 +80,7 @@ import {
  */
 /* eslint-enable max-len */
 export function jsonPrune(source, propsToRemove, requiredInitialProps, stack) {
-    const stackRegexp = stack ? toRegExp(stack) : toRegExp('/.?/');
-    if (!matchStackTrace(stackRegexp, new Error().stack)) {
+    if (!!stack && !matchStackTrace(stack, new Error().stack)) {
         return;
     }
 
@@ -202,4 +207,10 @@ jsonPrune.names = [
     'abp-json-prune',
 ];
 
-jsonPrune.injections = [hit, toRegExp, matchStackTrace, getWildcardPropertyInChain];
+jsonPrune.injections = [
+    hit,
+    matchStackTrace,
+    getWildcardPropertyInChain,
+    toRegExp,
+    getWildcardSymbol,
+];

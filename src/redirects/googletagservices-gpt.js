@@ -19,8 +19,10 @@ import {
 export function GoogleTagServicesGpt(source) {
     const companionAdsService = {
         addEventListener: noopThis,
+        removeEventListener: noopThis,
         enableSyncLoading: noopFunc,
         setRefreshUnfilledSlots: noopFunc,
+        getSlots: noopArray,
     };
     const contentService = {
         addEventListener: noopThis,
@@ -46,7 +48,7 @@ export function GoogleTagServicesGpt(source) {
     Slot.prototype.clearTargeting = noopThis;
     Slot.prototype.defineSizeMapping = noopThis;
     Slot.prototype.get = noopNull;
-    Slot.prototype.getAdUnitPath = noopArray;
+    Slot.prototype.getAdUnitPath = noopStr;
     Slot.prototype.getAttributeKeys = noopArray;
     Slot.prototype.getCategoryExclusions = noopArray;
     Slot.prototype.getDomId = noopStr;
@@ -72,12 +74,13 @@ export function GoogleTagServicesGpt(source) {
         disableInitialLoad: noopFunc,
         display: noopFunc,
         enableAsyncRendering: noopFunc,
+        enableLazyLoad: noopFunc,
         enableSingleRequest: noopFunc,
         enableSyncRendering: noopFunc,
         enableVideoAds: noopFunc,
         get: noopNull,
         getAttributeKeys: noopArray,
-        getTargeting: noopFunc,
+        getTargeting: noopArray,
         getTargetingKeys: noopArray,
         getSlots: noopArray,
         refresh: noopFunc,

@@ -1,17 +1,25 @@
-/* eslint-disable no-eval, no-underscore-dangle */
-import { clearGlobalProps } from '../helpers';
+/* eslint-disable no-underscore-dangle */
+import { runScriptlet, clearGlobalProps } from '../helpers';
 
 const { test, module } = QUnit;
 const name = 'abort-on-property-write';
 const PROPERTY = 'aaa';
 const CHAIN_PROPERTY = 'aaa.bbb';
 
-// copy eval to prevent rollup warnings
-const evalWrap = eval;
-
 const changingProps = [PROPERTY, 'hit', '__debug'];
 
-module(name);
+const beforeEach = () => {
+    window.__debug = () => {
+        window.hit = 'FIRED';
+    };
+};
+
+const afterEach = () => {
+    clearGlobalProps(...changingProps);
+};
+
+module(name, { beforeEach, afterEach });
+
 test('Checking if alias name works', (assert) => {
     const adgParams = {
         name,
@@ -37,18 +45,11 @@ test('Checking if alias name works', (assert) => {
     assert.strictEqual(codeByAdgParams, codeByAbpParams, 'abp name - ok');
 });
 
-test('abort-on-property-write: adg alias, set prop for existed prop', (assert) => {
-    const params = {
-        name,
-        args: [PROPERTY],
-        verbose: true,
-    };
-    window.__debug = () => {
-        window.hit = 'value';
-    };
+test('adg alias, set prop for existed prop', (assert) => {
     window[PROPERTY] = 'value';
-    const resString = window.scriptlets.invoke(params);
-    evalWrap(resString);
+    const scriptletArgs = [PROPERTY];
+    runScriptlet(name, scriptletArgs);
+
     assert.throws(
         () => {
             window[PROPERTY] = 'new value';
@@ -56,24 +57,16 @@ test('abort-on-property-write: adg alias, set prop for existed prop', (assert) =
         /ReferenceError/,
         `should throw Reference error when try to access property ${PROPERTY}`,
     );
-    assert.equal(window.hit, 'value', 'Hit function was executed');
-    clearGlobalProps(...changingProps);
+    assert.strictEqual(window.hit, 'FIRED', 'hit fired');
 });
 
-test('abort-on-property-write dot notation', (assert) => {
-    const params = {
-        name,
-        args: [CHAIN_PROPERTY],
-        verbose: true,
-    };
-    window.__debug = () => {
-        window.hit = 'value';
-    };
+test('dot notation', (assert) => {
     window.aaa = {
         bbb: 'value',
     };
-    const resString = window.scriptlets.invoke(params);
-    evalWrap(resString);
+    const scriptletArgs = [CHAIN_PROPERTY];
+    runScriptlet(name, scriptletArgs);
+
     assert.throws(
         () => {
             window.aaa.bbb = 'new value';
@@ -81,22 +74,15 @@ test('abort-on-property-write dot notation', (assert) => {
         /ReferenceError/,
         `should throw Reference error when try to access property ${CHAIN_PROPERTY}`,
     );
-    assert.equal(window.hit, 'value', 'Hit function was executed');
-    clearGlobalProps(...changingProps);
+    assert.strictEqual(window.hit, 'FIRED', 'hit fired');
 });
 
-test('abort-on-property-write dot notation deferred defenition', (assert) => {
-    const params = {
-        name,
-        args: [CHAIN_PROPERTY],
-        verbose: true,
-    };
-    window.__debug = () => {
-        window.hit = 'value';
-    };
-    const resString = window.scriptlets.invoke(params);
-    evalWrap(resString);
+test('dot notation deferred defenition', (assert) => {
+    const scriptletArgs = [CHAIN_PROPERTY];
+    runScriptlet(name, scriptletArgs);
+
     window.aaa = {};
+
     assert.throws(
         () => {
             window.aaa.bbb = 'new value';
@@ -104,72 +90,5 @@ test('abort-on-property-write dot notation deferred defenition', (assert) => {
         /ReferenceError/,
         `should throw Reference error when try to access property ${CHAIN_PROPERTY}`,
     );
-    assert.equal(window.hit, 'value', 'Hit function was executed');
-    clearGlobalProps(...changingProps);
-});
-
-test('abort-on-property-write: matches stack', (assert) => {
-    const params = {
-        name,
-        args: [
-            [PROPERTY],
-            'tests.js',
-        ],
-        verbose: true,
-    };
-    window.__debug = () => {
-        window.hit = 'value';
-    };
-    window[PROPERTY] = 'value';
-    const resString = window.scriptlets.invoke(params);
-    evalWrap(resString);
-    assert.throws(
-        () => {
-            window[PROPERTY] = 'new value';
-        },
-        /ReferenceError/,
-        `should throw Reference error when try to access property ${PROPERTY}`,
-    );
-    assert.equal(window.hit, 'value', 'Hit function was executed');
-    clearGlobalProps(...changingProps);
-});
-
-test('abort-on-property-write: does NOT match stack', (assert) => {
-    const params = {
-        name,
-        args: [
-            [PROPERTY],
-            'no_match.js',
-        ],
-        verbose: true,
-    };
-    window.__debug = () => {
-        window.hit = 'value';
-    };
-    window[PROPERTY] = 'value';
-    const resString = window.scriptlets.invoke(params);
-    evalWrap(resString);
-
-    assert.equal(window.hit, undefined, 'Hit function was NOT executed');
-    clearGlobalProps(...changingProps);
-});
-
-test('abort-on-property-write: matches stack of our own script', (assert) => {
-    const params = {
-        name,
-        args: [
-            [PROPERTY],
-            'abortOnPropertyWrite',
-        ],
-        verbose: true,
-    };
-    window.__debug = () => {
-        window.hit = 'value';
-    };
-    window[PROPERTY] = 'value';
-    const resString = window.scriptlets.invoke(params);
-    evalWrap(resString);
-
-    assert.equal(window.hit, undefined, 'Hit function was NOT executed');
-    clearGlobalProps(...changingProps);
+    assert.strictEqual(window.hit, 'FIRED', 'hit fired');
 });

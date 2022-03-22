@@ -23,26 +23,40 @@ import {
  * ```
  */
 /* eslint-enable max-len */
-export function debugCurrentInlineScript(source, property, search = null) {
-    const regex = search ? toRegExp(search) : null;
+export function debugCurrentInlineScript(source, property, search) {
+    const searchRegexp = toRegExp(search);
     const rid = randomId();
 
     const getCurrentScript = () => {
-        if (!document.currentScript) { // eslint-disable-line compat/compat
-            const scripts = document.getElementsByTagName('script');
-            return scripts[scripts.length - 1];
+        if ('currentScript' in document) {
+            return document.currentScript; // eslint-disable-line compat/compat
         }
-        return document.currentScript; // eslint-disable-line compat/compat
+        const scripts = document.getElementsByTagName('script');
+        return scripts[scripts.length - 1];
     };
 
     const ourScript = getCurrentScript();
 
     const abort = () => {
         const scriptEl = getCurrentScript();
+        if (!scriptEl) {
+            return;
+        }
+        let content = scriptEl.textContent;
+
+        // We are using Node.prototype.textContent property descriptor
+        // to get the real script content
+        // even when document.currentScript.textContent is replaced.
+        // https://github.com/AdguardTeam/Scriptlets/issues/57#issuecomment-593638991
+        try {
+            const textContentGetter = Object.getOwnPropertyDescriptor(Node.prototype, 'textContent').get;
+            content = textContentGetter.call(scriptEl);
+        } catch (e) { } // eslint-disable-line no-empty
+
         if (scriptEl instanceof HTMLScriptElement
-            && scriptEl.textContent.length > 0
+            && content.length > 0
             && scriptEl !== ourScript
-            && (!regex || regex.test(scriptEl.textContent))) {
+            && searchRegexp.test(content)) {
             hit(source);
             debugger; // eslint-disable-line no-debugger
         }
@@ -52,6 +66,20 @@ export function debugCurrentInlineScript(source, property, search = null) {
         const chainInfo = getPropertyInChain(owner, property);
         let { base } = chainInfo;
         const { prop, chain } = chainInfo;
+
+        // The scriptlet might be executed before the chain property has been created
+        // (for instance, document.body before the HTML body was loaded).
+        // In this case we're checking whether the base element exists or not
+        // and if not, we simply exit without overriding anything.
+        // e.g. https://github.com/AdguardTeam/Scriptlets/issues/57#issuecomment-575841092
+        if (base instanceof Object === false && base === null) {
+            const props = property.split('.');
+            const propIndex = props.indexOf(prop);
+            const baseName = props[propIndex - 1];
+            console.log(`The scriptlet had been executed before the ${baseName} was loaded.`); // eslint-disable-line no-console, max-len
+            return;
+        }
+
         if (chain) {
             const setter = (a) => {
                 base = a;

@@ -1,11 +1,20 @@
-/* eslint-disable no-eval, no-underscore-dangle */
-
+/* eslint-disable no-eval, no-underscore-dangle, no-console */
 const { test, module } = QUnit;
 const name = 'json-prune';
 
 const nativeParse = JSON.parse;
-module(name);
+const nativeConsole = console.log;
 
+const FETCH_OBJECTS_PATH = './test-files';
+
+const afterEach = () => {
+    console.log = nativeConsole;
+};
+
+module(name, { afterEach });
+
+// not a common method for running scriptlet
+// can not be imported from helpers
 const runScriptlet = (name, ...args) => {
     const params = {
         name,
@@ -37,8 +46,8 @@ test('Checking if alias name works', (assert) => {
 });
 
 test('Response.json() mocking -- remove single propsToRemove', async (assert) => {
-    const INPUT_JSON_PATH = './json-prune-objects/test01.json';
-    const inputRequest = new Request(INPUT_JSON_PATH);
+    const INPUT_JSON_PATH = `${FETCH_OBJECTS_PATH}/test01.json`;
+    const inputRequest = new Request(INPUT_JSON_PATH); // eslint-disable-line compat/compat
 
     runScriptlet('json-prune', 'c3');
     const expectedJson = {
@@ -47,7 +56,7 @@ test('Response.json() mocking -- remove single propsToRemove', async (assert) =>
     };
     const done = assert.async();
 
-    const response = await fetch(inputRequest);
+    const response = await fetch(inputRequest); // eslint-disable-line compat/compat
     const actualJson = await response.json();
 
     assert.deepEqual(actualJson, expectedJson);
@@ -55,8 +64,8 @@ test('Response.json() mocking -- remove single propsToRemove', async (assert) =>
 });
 
 test('Response.json() mocking -- remove multiple propsToRemove', async (assert) => {
-    const INPUT_JSON_PATH = './json-prune-objects/test02.json';
-    const inputRequest = new Request(INPUT_JSON_PATH);
+    const INPUT_JSON_PATH = `${FETCH_OBJECTS_PATH}/test02.json`;
+    const inputRequest = new Request(INPUT_JSON_PATH); // eslint-disable-line compat/compat
 
     runScriptlet('json-prune', 'src count');
     const expectedJson = {
@@ -64,7 +73,7 @@ test('Response.json() mocking -- remove multiple propsToRemove', async (assert) 
     };
     const done = assert.async();
 
-    const response = await fetch(inputRequest);
+    const response = await fetch(inputRequest); // eslint-disable-line compat/compat
     const actualJson = await response.json();
 
     assert.deepEqual(actualJson, expectedJson);
@@ -72,8 +81,8 @@ test('Response.json() mocking -- remove multiple propsToRemove', async (assert) 
 });
 
 test('Response.json() mocking -- remove single nested property', async (assert) => {
-    const INPUT_JSON_PATH = './json-prune-objects/test03.json';
-    const inputRequest = new Request(INPUT_JSON_PATH);
+    const INPUT_JSON_PATH = `${FETCH_OBJECTS_PATH}/test03.json`;
+    const inputRequest = new Request(INPUT_JSON_PATH); // eslint-disable-line compat/compat
 
     runScriptlet('json-prune', 'cc.arr');
     const expectedJson = {
@@ -87,7 +96,7 @@ test('Response.json() mocking -- remove single nested property', async (assert) 
 
     const done = assert.async();
 
-    const response = await fetch(inputRequest);
+    const response = await fetch(inputRequest); // eslint-disable-line compat/compat
     const actualJson = await response.json();
 
     assert.deepEqual(actualJson, expectedJson);
@@ -95,8 +104,8 @@ test('Response.json() mocking -- remove single nested property', async (assert) 
 });
 
 test('Response.json() mocking -- remove multiple mixed properties', async (assert) => {
-    const INPUT_JSON_PATH = './json-prune-objects/test04.json';
-    const inputRequest = new Request(INPUT_JSON_PATH);
+    const INPUT_JSON_PATH = `${FETCH_OBJECTS_PATH}/test04.json`;
+    const inputRequest = new Request(INPUT_JSON_PATH); // eslint-disable-line compat/compat
 
     runScriptlet('json-prune', 'ab cc1.arr cc1.id');
     const expectedJson = {
@@ -108,7 +117,7 @@ test('Response.json() mocking -- remove multiple mixed properties', async (asser
 
     const done = assert.async();
 
-    const response = await fetch(inputRequest);
+    const response = await fetch(inputRequest); // eslint-disable-line compat/compat
     const actualJson = await response.json();
 
     assert.deepEqual(actualJson, expectedJson);
@@ -116,8 +125,8 @@ test('Response.json() mocking -- remove multiple mixed properties', async (asser
 });
 
 test('Response.json() mocking -- remove single properties with wildcard', async (assert) => {
-    const INPUT_JSON_PATH = './json-prune-objects/test05.json';
-    const inputRequest = new Request(INPUT_JSON_PATH);
+    const INPUT_JSON_PATH = `${FETCH_OBJECTS_PATH}/test05.json`;
+    const inputRequest = new Request(INPUT_JSON_PATH); // eslint-disable-line compat/compat
 
     runScriptlet('json-prune', '*.id');
     const expectedJson = {
@@ -131,7 +140,7 @@ test('Response.json() mocking -- remove single properties with wildcard', async 
 
     const done = assert.async();
 
-    const response = await fetch(inputRequest);
+    const response = await fetch(inputRequest); // eslint-disable-line compat/compat
     const actualJson = await response.json();
 
     assert.deepEqual(actualJson, expectedJson);
@@ -139,8 +148,8 @@ test('Response.json() mocking -- remove single properties with wildcard', async 
 });
 
 test('Response.json() mocking -- remove single properties with wildcard', async (assert) => {
-    const INPUT_JSON_PATH = './json-prune-objects/test06.json';
-    const inputRequest = new Request(INPUT_JSON_PATH);
+    const INPUT_JSON_PATH = `${FETCH_OBJECTS_PATH}/test06.json`;
+    const inputRequest = new Request(INPUT_JSON_PATH); // eslint-disable-line compat/compat
 
     runScriptlet('json-prune', '[].content.[].source', 'state.ready');
     const expectedJson = [
@@ -157,7 +166,7 @@ test('Response.json() mocking -- remove single properties with wildcard', async 
 
     const done = assert.async();
 
-    const response = await fetch(inputRequest);
+    const response = await fetch(inputRequest); // eslint-disable-line compat/compat
     const actualJson = await response.json();
 
     assert.deepEqual(actualJson, expectedJson);
@@ -303,8 +312,8 @@ test('can NOT remove propsToRemove if nested requiredInitialProps has wildcard b
 });
 
 test('does NOT remove propsToRemove if invoked without parameter propsToRemove and return hostname', (assert) => {
-    // eslint-disable-next-line no-console
     console.log = (host, params) => {
+        // eslint-disable-next-line compat/compat
         assert.strictEqual(host, window.location.hostname, 'should log hostname in console');
         assert.deepEqual(params, { a: 1, b: 2 }, 'should log parameters in console');
     };
@@ -313,16 +322,16 @@ test('does NOT remove propsToRemove if invoked without parameter propsToRemove a
 });
 
 test('removes propsToRemove + stack match', (assert) => {
-    const stackMatch = 'tests.js';
+    const stackMatch = 'json-prune';
 
     runScriptlet('json-prune', 'c', '', stackMatch);
-    assert.deepEqual(JSON.parse('{"a":1,"b":2,"c":3}'), { a: 1, b: 2 }, 'should remove single propsToRemove');
+    assert.deepEqual(JSON.parse('{"a":1,"b":2,"c":3}'), { a: 1, b: 2 }, 'stack match: should remove single propsToRemove');
     runScriptlet('json-prune', 'b c', '', stackMatch);
-    assert.deepEqual(JSON.parse('{"a":1,"b":2,"c":3}'), { a: 1 }, 'should remove multiple propsToRemove');
+    assert.deepEqual(JSON.parse('{"a":1,"b":2,"c":3}'), { a: 1 }, 'stack match: should remove few propsToRemove');
     runScriptlet('json-prune', 'x.b', 'x.a', stackMatch);
-    assert.deepEqual(JSON.parse('{"x": {"a":1, "b":2}}'), { x: { a: 1 } }, 'should remove propsToRemove if single nested requiredInitialProps is specified');
+    assert.deepEqual(JSON.parse('{"x": {"a":1, "b":2}}'), { x: { a: 1 } }, 'stack match: should remove propsToRemove if single nested requiredInitialProps is specified');
     runScriptlet('json-prune', 'nested.c nested.b', '', stackMatch);
-    assert.deepEqual(JSON.parse('{"nested":{"a":1,"b":2,"c":3}}'), { nested: { a: 1 } }, 'should remove multiple nested propsToRemove');
+    assert.deepEqual(JSON.parse('{"nested":{"a":1,"b":2,"c":3}}'), { nested: { a: 1 } }, 'stack match: should remove multiple nested propsToRemove');
 });
 
 test('can NOT remove propsToRemove because of no stack match', (assert) => {
@@ -334,4 +343,10 @@ test('can NOT remove propsToRemove because of no stack match', (assert) => {
     assert.deepEqual(JSON.parse('{"x": {"a":1, "b":2}}'), { x: { a: 1, b: 2 } }, 'should NOT remove propsToRemove if there in no stack match');
     runScriptlet('json-prune', 'nested.c nested.b', '', stackNoMatch);
     assert.deepEqual(JSON.parse('{"nested":{"a":1,"b":2,"c":3}}'), { nested: { a: 1, b: 2, c: 3 } }, 'should NOT remove multiple nested propsToRemove if there in no stack match');
+});
+
+test('does not remove propsToRemove - invalid regexp pattern for stack match', (assert) => {
+    const stackArg = '/\\/';
+    runScriptlet('json-prune', 'x', '', stackArg);
+    assert.deepEqual(JSON.parse('{"x":1}'), { x: 1 }, 'should NOT remove propsToRemove');
 });

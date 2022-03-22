@@ -1,21 +1,25 @@
-/* eslint-disable no-underscore-dangle, no-eval */
-import { clearGlobalProps } from '../helpers';
+/* eslint-disable no-underscore-dangle */
+import { runRedirect, clearGlobalProps } from '../helpers';
 
 const { test, module } = QUnit;
 const name = 'metrika-yandex-watch';
 
-module(name);
+const changingProps = ['hit', '__debug'];
 
-const evalWrapper = eval;
+const beforeEach = () => {
+    window.__debug = () => {
+        window.hit = 'FIRED';
+    };
+};
+
+const afterEach = () => {
+    clearGlobalProps(...changingProps);
+};
+
+module(name, { beforeEach, afterEach });
 
 test('AdGuard: yandex metrika watch.js', (assert) => {
-    const params = {
-        name,
-        verbose: true,
-    };
-    window.__debug = () => { window.hit = 'FIRED'; };
-
-    assert.expect(7);
+    assert.expect(12);
 
     // yandex_metrika_callbacks: these callbacks needed for
     // creating an instance of Ya.Metrika after script loading
@@ -23,13 +27,18 @@ test('AdGuard: yandex metrika watch.js', (assert) => {
         () => assert.ok(true, 'yandex_metrika_callbacks were executed'),
     ];
 
-    // run scriptlet
-    const resString = window.scriptlets.redirects.getCode(params);
-    evalWrapper(resString);
+    runRedirect(name);
 
     assert.ok(window.Ya.Metrika, 'Metrika function was created');
     const ya = new window.Ya.Metrika();
     assert.notOk(ya.addFileExtension(), 'addFileExtension function created and executed');
+
+    // no-options methods test
+    assert.notOk(ya.addFileExtension(), 'addFileExtension function created and executed');
+    assert.notOk(ya.getClientID(), 'getClientID function created and executed');
+    assert.notOk(ya.setUserID(), 'setUserID function created and executed');
+    assert.notOk(ya.userParams(), 'userParams function created and executed');
+    assert.notOk(ya.params(), 'params function created and executed');
 
     // reachGoal method test
     const done = assert.async();
@@ -50,5 +59,4 @@ test('AdGuard: yandex metrika watch.js', (assert) => {
     ya.extLink('some url', { callback: extLinkCb, ctx: 123 });
 
     assert.strictEqual(window.hit, 'FIRED', 'hit function was executed');
-    clearGlobalProps('__debug', 'hit');
 });

@@ -2,7 +2,7 @@
     "scriptlets": [
         {
             "adg": "abort-current-inline-script",
-            "ubo": "abort-current-inline-script.js (acis.js)",
+            "ubo": "abort-current-script.js (acs.js, abort-current-inline-script.js, acis.js)",
             "abp": "abort-current-inline-script"
         },
         {
@@ -16,12 +16,20 @@
             "abp": "abort-on-property-write"
         },
         {
+            "adg": "abort-on-stack-trace",
+            "ubo": "abort-on-stack-trace.js (aost.js)"
+        },
+        {
             "adg": "adjust-setInterval",
             "ubo": "nano-setInterval-booster.js (nano-sib.js)"
         },
         {
             "adg": "adjust-setTimeout",
             "ubo": "nano-setTimeout-booster.js (nano-stb.js)"
+        },
+        {
+            "adg": "close-window",
+            "ubo": "window-close-if.js"
         },
         {
             "adg": "debug-current-inline-script"
@@ -46,6 +54,10 @@
             "abp": "json-prune"
         },
         {
+            "adg": "log",
+            "abp": "log"
+        },
+        {
             "adg": "log-addEventListener",
             "ubo": "addEventListener-logger.js (aell.js)"
         },
@@ -53,8 +65,11 @@
             "adg": "log-eval"
         },
         {
-            "adg": "log",
-            "abp": "log"
+            "adg": "log-on-stack-trace"
+        },
+        {
+            "adg": "no-floc",
+            "ubo": "no-floc.js"
         },
         {
             "adg": "noeval"
@@ -82,6 +97,14 @@
             "adg": "prevent-fab-3.2.0"
         },
         {
+            "adg": "prevent-fetch",
+            "ubo": "no-fetch-if.js"
+        },
+        {
+            "adg": "prevent-xhr",
+            "ubo": "no-xhr-if.js"
+        },
+        {
             "adg": "prevent-popads-net"
         },
         {
@@ -94,7 +117,7 @@
         },
         {
             "adg": "prevent-setTimeout",
-            "ubo": "no-setTimeout-if.js (nostif.js)"
+            "ubo": "no-setTimeout-if.js (nostif.js, setTimeout-defuser.js)"
         },
         {
             "adg": "prevent-window-open"
@@ -112,21 +135,15 @@
             "ubo": "cookie-remover.js"
         },
         {
+            "adg": "set-attr"
+        },
+        {
             "adg": "set-constant",
             "ubo": "set-constant.js (set.js)",
             "abp": "override-property-read"
         },
         {
             "adg": "set-popads-dummy"
-        },
-        {
-            "ubo": "setInterval-defuser.js (sid.js)"
-        },
-        {
-            "ubo": "setTimeout-defuser.js (std.js)"
-        },
-        {
-            "ubo": "requestAnimationFrame-if.js (raf-if.js)"
         },
         {
             "ubo": "webrtc-if.js"
@@ -156,13 +173,7 @@
             "ubo": "twitch-videoad.js"
         },
         {
-            "ubo": "fingerprint2.js"
-        },
-        {
             "abp": "trace"
-        },
-        {
-            "abp": "uabinject-defuser"
         },
         {
             "abp": "hide-if-shadow-contains"
@@ -207,13 +218,22 @@
             "abp": "freeze-element"
         },
         {
-            "ubo": "abort-on-stack-trace.js (aost.js)"
-        },
-        {
             "abp": "prepareInjection"
         },
         {
             "abp": "commitInjection"
+        },
+        {
+            "abp": "abort-on-iframe-property-read"
+        },
+        {
+            "abp": "abort-on-iframe-property-write"
+        },
+        {
+            "ubo": "abort-current-script.js (acs.js, abort-current-inline-script.js, acis.js)"
+        },
+        {
+            "ubo": "refresh-defuser.js"
         }
     ],
     "redirects": [
@@ -242,6 +262,17 @@
             "ubo": "amazon_apstag.js"
         },
         {
+            "adg": "ati-smarttag"
+        },
+        {
+            "adg": "click2load.html",
+            "ubo": "click2load.html"
+        },
+        {
+            "adg": "fingerprintjs",
+            "ubo": "fingerprint2.js"
+        },
+        {
             "adg": "google-analytics",
             "ubo": "google-analytics_analytics.js"
         },
@@ -254,12 +285,14 @@
             "ubo": "googlesyndication_adsbygoogle.js"
         },
         {
-            "adg": "googletagmanager-gtm",
-            "ubo": "googletagmanager_gtm.js"
-        },
-        {
             "adg": "googletagservices-gpt",
             "ubo": "googletagservices_gpt.js"
+        },
+        {
+            "adg": "gemius"
+        },
+        {
+            "adg": "matomo"
         },
         {
             "adg": "metrika-yandex-watch"
@@ -301,13 +334,22 @@
             "abp": "blank-mp4"
         },
         {
-            "adg": "noopvmap-1.0"
+            "adg": "noopvmap-1.0",
+            "ubo": "noop-vmap1.0.xml"
         },
         {
             "adg": "noopvast-2.0"
         },
         {
             "adg": "noopvast-3.0"
+        },
+        {
+            "adg": "prevent-bab",
+            "ubo": "nobab.js"
+        },
+        {
+            "adg": "prevent-bab2",
+            "ubo": "nobab2.js"
         },
         {
             "adg": "prevent-fab-3.2.0",
@@ -366,13 +408,10 @@
             "ubo": "window.open-defuser.js"
         },
         {
-            "ubo": "nobab.js"
-        },
-        {
             "ubo": "noeval.js"
         },
         {
-            "ubo": "click2load.html"
+            "ubo": "mxpnl_mixpanel.js"
         }
     ]
 }

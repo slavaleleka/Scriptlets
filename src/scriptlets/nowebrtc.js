@@ -1,12 +1,16 @@
 /* eslint-disable no-unused-vars, no-extra-bind, func-names */
-import { hit, noopFunc } from '../helpers';
+import {
+    hit,
+    noopFunc,
+    convertRtcConfigToString,
+} from '../helpers';
 
 /* eslint-disable max-len */
 /**
  * @scriptlet nowebrtc
  *
  * @description
- * Disables WebRTC by overriding `RTCPeerConnection`. The overriden function will log every attempt to create a new connection.
+ * Disables WebRTC by overriding `RTCPeerConnection`. The overridden function will log every attempt to create a new connection.
  *
  * Related UBO scriptlet:
  * https://github.com/gorhill/uBlock/wiki/Resources-Library#nowebrtcjs-
@@ -30,7 +34,8 @@ export function nowebrtc(source) {
     }
 
     const rtcReplacement = (config) => {
-        hit(source, `Document tried to create an RTCPeerConnection: ${config}`);
+        // eslint-disable-next-line max-len
+        hit(source, `Document tried to create an RTCPeerConnection: ${convertRtcConfigToString(config)}`);
     };
     rtcReplacement.prototype = {
         close: noopFunc,
@@ -58,4 +63,8 @@ nowebrtc.names = [
     'ubo-nowebrtc',
 ];
 
-nowebrtc.injections = [hit, noopFunc];
+nowebrtc.injections = [
+    hit,
+    noopFunc,
+    convertRtcConfigToString,
+];

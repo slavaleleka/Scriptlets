@@ -5,11 +5,13 @@ import {
     toRegExp,
 } from './string-utils';
 
+import { getObjectFromEntries } from './object-utils';
+
 import { ADG_SCRIPTLET_MASK } from './parse-rule';
 
 import * as scriptletsList from '../scriptlets/scriptlets-list';
 
-import { redirects } from '../../scripts/compatibility-table.json';
+import redirects from './compatibility-redirects';
 
 const JS_RULE_MARKER = '#%#';
 const COMMENT_MARKER = '!';
@@ -128,6 +130,7 @@ const isValidScriptletName = (name) => {
  * Redirect resources markers
  */
 const ADG_UBO_REDIRECT_MARKER = 'redirect=';
+const ADG_UBO_REDIRECT_RULE_MARKER = 'redirect-rule=';
 const ABP_REDIRECT_MARKER = 'rewrite=abp-resource:';
 const EMPTY_REDIRECT_MARKER = 'empty';
 
@@ -141,37 +144,56 @@ const VALID_SOURCE_TYPES = [
     'other',
 ];
 
-const EMPTY_REDIRECT_SUPPORTED_TYPES = [
-    'subdocument',
-    'stylesheet',
-    'script',
-    'xmlhttprequest',
-    'other',
+/**
+ * Source types for redirect rules if there is no one of them.
+ * Used for ADG -> UBO conversion.
+ */
+const ABSENT_SOURCE_TYPE_REPLACEMENT = [
+    {
+        NAME: 'nooptext',
+        TYPES: VALID_SOURCE_TYPES,
+    },
+    {
+        NAME: 'noopjs',
+        TYPES: ['script'],
+    },
+    {
+        NAME: 'noopframe',
+        TYPES: ['subdocument'],
+    },
+    {
+        NAME: '1x1-transparent.gif',
+        TYPES: ['image'],
+    },
+    {
+        NAME: 'noopmp3-0.1s',
+        TYPES: ['media'],
+    },
+    {
+        NAME: 'noopmp4-1s',
+        TYPES: ['media'],
+    },
+    {
+        NAME: 'googlesyndication-adsbygoogle',
+        TYPES: ['xmlhttprequest', 'script'],
+    },
+    {
+        NAME: 'google-analytics',
+        TYPES: ['script'],
+    },
+    {
+        NAME: 'googletagservices-gpt',
+        TYPES: ['script'],
+    },
 ];
 
 const validAdgRedirects = redirects.filter((el) => el.adg);
 
 /**
- * Converts array of pairs to object.
- * Sort of Object.fromEntries() polyfill.
- * @param {Array} pairs - array of pairs
- * @returns {Object}
- */
-const objFromEntries = (pairs) => {
-    const output = pairs
-        .reduce((acc, el) => {
-            const [key, value] = el;
-            acc[key] = value;
-            return acc;
-        }, {});
-    return output;
-};
-
-/**
  * Compatibility object where KEYS = UBO redirect names and VALUES = ADG redirect names
  * It's used for UBO -> ADG converting
  */
-const uboToAdgCompatibility = objFromEntries(
+const uboToAdgCompatibility = getObjectFromEntries(
     validAdgRedirects
         .filter((el) => el.ubo)
         .map((el) => {
@@ -183,7 +205,7 @@ const uboToAdgCompatibility = objFromEntries(
  * Compatibility object where KEYS = ABP redirect names and VALUES = ADG redirect names
  * It's used for ABP -> ADG converting
  */
-const abpToAdgCompatibility = objFromEntries(
+const abpToAdgCompatibility = getObjectFromEntries(
     validAdgRedirects
         .filter((el) => el.abp)
         .map((el) => {
@@ -195,7 +217,7 @@ const abpToAdgCompatibility = objFromEntries(
  * Compatibility object where KEYS = UBO redirect names and VALUES = ADG redirect names
  * It's used for ADG -> UBO converting
  */
-const adgToUboCompatibility = objFromEntries(
+const adgToUboCompatibility = getObjectFromEntries(
     validAdgRedirects
         .filter((el) => el.ubo)
         .map((el) => {
@@ -207,7 +229,7 @@ const adgToUboCompatibility = objFromEntries(
  * Needed for AdGuard redirect names validation where KEYS = **valid** AdGuard redirect names
  * 'adgToUboCompatibility' is still needed for ADG -> UBO converting
  */
-const validAdgCompatibility = objFromEntries(
+const validAdgCompatibility = getObjectFromEntries(
     validAdgRedirects
         .map((el) => {
             return [el.adg, 'valid adg redirect'];
@@ -216,19 +238,22 @@ const validAdgCompatibility = objFromEntries(
 
 const REDIRECT_RULE_TYPES = {
     VALID_ADG: {
-        marker: ADG_UBO_REDIRECT_MARKER,
+        redirectMarker: ADG_UBO_REDIRECT_MARKER,
+        redirectRuleMarker: ADG_UBO_REDIRECT_RULE_MARKER,
         compatibility: validAdgCompatibility,
     },
     ADG: {
-        marker: ADG_UBO_REDIRECT_MARKER,
+        redirectMarker: ADG_UBO_REDIRECT_MARKER,
+        redirectRuleMarker: ADG_UBO_REDIRECT_RULE_MARKER,
         compatibility: adgToUboCompatibility,
     },
     UBO: {
-        marker: ADG_UBO_REDIRECT_MARKER,
+        redirectMarker: ADG_UBO_REDIRECT_MARKER,
+        redirectRuleMarker: ADG_UBO_REDIRECT_RULE_MARKER,
         compatibility: uboToAdgCompatibility,
     },
     ABP: {
-        marker: ABP_REDIRECT_MARKER,
+        redirectMarker: ABP_REDIRECT_MARKER,
         compatibility: abpToAdgCompatibility,
     },
 };
@@ -259,10 +284,11 @@ const getRedirectName = (rule, marker) => {
  * @param {string} rule - rule text
  */
 const isAdgRedirectRule = (rule) => {
-    const MARKER_IN_BASE_PART_MASK = '/((?!\\$|\\,).{1})redirect=(.{0,}?)\\$(popup)?/';
+    const MARKER_IN_BASE_PART_MASK = '/((?!\\$|\\,).{1})redirect((-rule)?)=(.{0,}?)\\$(popup)?/';
     return (
         !isComment(rule)
-        && rule.indexOf(REDIRECT_RULE_TYPES.ADG.marker) > -1
+        && (rule.indexOf(REDIRECT_RULE_TYPES.ADG.redirectMarker) > -1
+            || rule.indexOf(REDIRECT_RULE_TYPES.ADG.redirectRuleMarker) > -1)
         // some js rules may have 'redirect=' in it, so we should get rid of them
         && rule.indexOf(JS_RULE_MARKER) === -1
         // get rid of rules like '_redirect=*://look.$popup'
@@ -270,17 +296,36 @@ const isAdgRedirectRule = (rule) => {
     );
 };
 
+// const getRedirectResourceMarkerData = ()
+
 /**
  * Checks if the `rule` satisfies the `type`
  * @param {string} rule - rule text
  * @param {'VALID_ADG'|'ADG'|'UBO'|'ABP'} type - type of a redirect rule
  */
 const isRedirectRuleByType = (rule, type) => {
-    const { marker, compatibility } = REDIRECT_RULE_TYPES[type];
+    const {
+        redirectMarker,
+        redirectRuleMarker,
+        compatibility,
+    } = REDIRECT_RULE_TYPES[type];
 
-    if (rule
-        && (!isComment(rule))
-        && (rule.indexOf(marker) > -1)) {
+    if (rule && !isComment(rule)) {
+        let marker;
+        // check if there is a $redirect-rule modifier in rule
+        let markerIndex = redirectRuleMarker ? rule.indexOf(redirectRuleMarker) : -1;
+        if (markerIndex > -1) {
+            marker = redirectRuleMarker;
+        } else {
+            // check if there $redirect modifier in rule
+            markerIndex = rule.indexOf(redirectMarker);
+            if (markerIndex > -1) {
+                marker = redirectMarker;
+            } else {
+                return false;
+            }
+        }
+
         const redirectName = getRedirectName(rule, marker);
 
         if (!redirectName) {
@@ -347,31 +392,22 @@ const isAbpRedirectCompatibleWithAdg = (rule) => {
  * @returns {boolean}
  */
 const hasValidContentType = (rule) => {
-    if (isRedirectRuleByType(rule, 'ADG')) {
-        const ruleModifiers = parseModifiers(rule);
-        // rule can have more than one source type modifier
-        const sourceTypes = ruleModifiers
-            .filter((el) => VALID_SOURCE_TYPES.indexOf(el) > -1);
+    const ruleModifiers = parseModifiers(rule);
+    // rule can have more than one source type modifier
+    const sourceTypes = ruleModifiers
+        .filter((el) => VALID_SOURCE_TYPES.indexOf(el) > -1);
 
-        const isSourceTypeSpecified = sourceTypes.length > 0;
-        const isEmptyRedirect = ruleModifiers.indexOf(`${ADG_UBO_REDIRECT_MARKER}${EMPTY_REDIRECT_MARKER}`) > -1;
+    const isSourceTypeSpecified = sourceTypes.length > 0;
+    // eslint-disable-next-line max-len
+    const isEmptyRedirect = ruleModifiers.indexOf(`${ADG_UBO_REDIRECT_MARKER}${EMPTY_REDIRECT_MARKER}`) > -1
+        || ruleModifiers.indexOf(`${ADG_UBO_REDIRECT_RULE_MARKER}${EMPTY_REDIRECT_MARKER}`) > -1;
 
-        if (isEmptyRedirect) {
-            if (isSourceTypeSpecified) {
-                const isValidType = sourceTypes.reduce((acc, sType) => {
-                    const isEmptySupported = EMPTY_REDIRECT_SUPPORTED_TYPES
-                        .find((type) => type === sType);
-                    return !!isEmptySupported && acc;
-                }, true);
-                return isValidType;
-            }
-            // no source type for 'empty' is allowed
-            return true;
-        }
-
-        return isSourceTypeSpecified;
+    if (isEmptyRedirect) {
+        // no source type for 'empty' is allowed
+        return true;
     }
-    return false;
+
+    return isSourceTypeSpecified;
 };
 
 const validator = {
@@ -384,7 +420,9 @@ const validator = {
     isAbpSnippetRule,
     getScriptletByName,
     isValidScriptletName,
+    ADG_UBO_REDIRECT_RULE_MARKER,
     REDIRECT_RULE_TYPES,
+    ABSENT_SOURCE_TYPE_REPLACEMENT,
     isAdgRedirectRule,
     isValidAdgRedirectRule,
     isAdgRedirectCompatibleWithUbo,

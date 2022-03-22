@@ -1,5 +1,5 @@
-/* eslint-disable no-eval, no-underscore-dangle */
-import { clearGlobalProps } from '../helpers';
+/* eslint-disable no-underscore-dangle */
+import { runScriptlet, clearGlobalProps } from '../helpers';
 
 const { test, module } = QUnit;
 const name = 'hide-in-shadow-dom';
@@ -9,36 +9,30 @@ const cleanUp = () => {
     elemsToClean.forEach((el) => el.remove());
 };
 
-const afterEach = () => {
-    clearGlobalProps('hit', '__debug');
-    cleanUp();
-};
-
-module(name, { afterEach });
-
-const createHit = () => {
+const beforeEach = () => {
     window.__debug = () => {
         window.hit = 'FIRED';
     };
 };
 
-const evalWrapper = eval;
+const afterEach = () => {
+    clearGlobalProps('hit', '__debug');
+    cleanUp();
+};
 
-// there should be 'Element.prototype.attachShadow' condition for each test
-// because some browsers do not support ShadowRoot
+module(name, { beforeEach, afterEach });
+
+// some browsers do not support ShadowRoot
 // for example, Firefox 52 which is used for browserstack tests
 // https://developer.mozilla.org/en-US/docs/Web/API/ShadowRoot
+const isSupported = typeof Element.prototype.attachShadow !== 'undefined';
 
-test('simple check', (assert) => {
-    if (Element.prototype.attachShadow) {
-        createHit();
-        const SELECTOR = '#test';
-        const params = {
-            name,
-            args: [SELECTOR],
-            verbose: true,
-        };
-
+if (!isSupported) {
+    test('unsupported', (assert) => {
+        assert.ok(true, 'Browser does not support it');
+    });
+} else {
+    test('simple check', (assert) => {
         const testHost = document.createElement('div');
         testHost.id = 'shadowHost';
         document.body.appendChild(testHost);
@@ -54,30 +48,18 @@ test('simple check', (assert) => {
         //   </div>
         // </body>
 
-        const resString = window.scriptlets.invoke(params);
-        evalWrapper(resString);
+        const SELECTOR = '#test';
+        runScriptlet(name, [SELECTOR]);
 
         const elemToCheck = testHost.shadowRoot.querySelector('p#test');
         const elemStyleDisplayProp = window.getComputedStyle(elemToCheck).display;
         assert.strictEqual(elemStyleDisplayProp, 'none', `Element ${SELECTOR} hidden`);
-        assert.strictEqual(window.hit, 'FIRED');
+        assert.strictEqual(window.hit, 'FIRED', 'hit fired');
         // clean up test elements
         elemsToClean.push(testChild, testHost);
-    } else {
-        assert.strictEqual(true, true, 'fake test to avoid qunit error');
-    }
-});
+    });
 
-test('few levels of shadow-doms', (assert) => {
-    if (Element.prototype.attachShadow) {
-        createHit();
-        const SELECTOR = '#inner';
-        const params = {
-            name,
-            args: [SELECTOR],
-            verbose: true,
-        };
-
+    test('few levels of shadow-doms', (assert) => {
         const testHost = document.createElement('div');
         testHost.id = 'shadowHost';
         document.body.appendChild(testHost);
@@ -101,30 +83,18 @@ test('few levels of shadow-doms', (assert) => {
         //   </div>
         // </body>
 
-        const resString = window.scriptlets.invoke(params);
-        evalWrapper(resString);
+        const SELECTOR = '#inner';
+        runScriptlet(name, [SELECTOR]);
 
         const elemToCheck = testHost.shadowRoot.querySelector('div#testChild').shadowRoot.querySelector('p#inner');
         const elemStyleDisplayProp = window.getComputedStyle(elemToCheck).display;
         assert.strictEqual(elemStyleDisplayProp, 'none', `Element ${SELECTOR} hidden`);
-        assert.strictEqual(window.hit, 'FIRED');
+        assert.strictEqual(window.hit, 'FIRED', 'hit fired');
         // clean up test elements
         elemsToClean.push(inner, testChild, testHost);
-    } else {
-        assert.strictEqual(true, true, 'fake test to avoid qunit error');
-    }
-});
+    });
 
-test('multiple shadow-doms inside another shadow-dom', (assert) => {
-    if (Element.prototype.attachShadow) {
-        createHit();
-        const SELECTOR = '#inner';
-        const params = {
-            name,
-            args: [SELECTOR],
-            verbose: true,
-        };
-
+    test('multiple shadow-doms inside another shadow-dom', (assert) => {
         const testHost = document.createElement('div');
         testHost.id = 'shadowHost';
         document.body.appendChild(testHost);
@@ -160,8 +130,8 @@ test('multiple shadow-doms inside another shadow-dom', (assert) => {
         //   </div>
         // </body>
 
-        const resString = window.scriptlets.invoke(params);
-        evalWrapper(resString);
+        const SELECTOR = '#inner';
+        runScriptlet(name, [SELECTOR]);
 
         const firstElemToCheck = testHost.shadowRoot.querySelector('div#first').shadowRoot.querySelector('p#inner');
         const secondElemToCheck = testHost.shadowRoot.querySelector('div#second').shadowRoot.querySelector('span#inner');
@@ -169,24 +139,12 @@ test('multiple shadow-doms inside another shadow-dom', (assert) => {
         const secondStyleDisplayProp = window.getComputedStyle(secondElemToCheck).display;
         assert.strictEqual(firstStyleDisplayProp, 'none', `Element ${SELECTOR} hidden in first inner shadow dom`);
         assert.strictEqual(secondStyleDisplayProp, 'none', `Element ${SELECTOR} hidden in second inner shadow dom`);
-        assert.strictEqual(window.hit, 'FIRED');
+        assert.strictEqual(window.hit, 'FIRED', 'hit fired');
         // clean up test elements
         elemsToClean.push(innerOfSecond, secondChild, innerOfFirst, firstChild, testHost);
-    } else {
-        assert.strictEqual(true, true, 'fake test to avoid qunit error');
-    }
-});
+    });
 
-test('shadow-dom host next to shadow-dom inside parental shadow-dom', (assert) => {
-    if (Element.prototype.attachShadow) {
-        createHit();
-        const SELECTOR = '#inner';
-        const params = {
-            name,
-            args: [SELECTOR],
-            verbose: true,
-        };
-
+    test('shadow-dom host next to shadow-dom inside parental shadow-dom', (assert) => {
         const testHost = document.createElement('div');
         testHost.id = 'shadowHost';
         document.body.appendChild(testHost);
@@ -222,8 +180,8 @@ test('shadow-dom host next to shadow-dom inside parental shadow-dom', (assert) =
         //   </div>
         // </body>
 
-        const resString = window.scriptlets.invoke(params);
-        evalWrapper(resString);
+        const SELECTOR = '#inner';
+        runScriptlet(name, [SELECTOR]);
 
         const elemForFirstCheck = testHost.shadowRoot.querySelector('div#shadowInner').shadowRoot.querySelector('p#inner');
         const elemForSecondCheck = testHost.querySelector('div#simpleChild').shadowRoot.querySelector('span#inner');
@@ -231,7 +189,7 @@ test('shadow-dom host next to shadow-dom inside parental shadow-dom', (assert) =
         const secondStyleDisplayProp = window.getComputedStyle(elemForSecondCheck).display;
         assert.strictEqual(firstStyleDisplayProp, 'none', `Element ${SELECTOR} hidden in first inner shadow dom`);
         assert.strictEqual(secondStyleDisplayProp, 'none', `Element ${SELECTOR} hidden in second inner shadow dom`);
-        assert.strictEqual(window.hit, 'FIRED');
+        assert.strictEqual(window.hit, 'FIRED', 'hit fired');
         innerOfSimple.remove();
         simpleChild.remove();
         innerOfFirst.remove();
@@ -239,21 +197,9 @@ test('shadow-dom host next to shadow-dom inside parental shadow-dom', (assert) =
         testHost.remove();
         // clean up test elements
         elemsToClean.push(innerOfSimple, simpleChild, innerOfFirst, shadowInner, testHost);
-    } else {
-        assert.strictEqual(true, true, 'fake test to avoid qunit error');
-    }
-});
+    });
 
-test('continue inner shadow-dom host searching after success with selector matching', (assert) => {
-    if (Element.prototype.attachShadow) {
-        createHit();
-        const SELECTOR = '#inner';
-        const params = {
-            name,
-            args: [SELECTOR],
-            verbose: true,
-        };
-
+    test('continue inner shadow-dom host searching after success with selector matching', (assert) => {
         const testHost = document.createElement('div');
         testHost.id = 'shadowHost';
         document.body.appendChild(testHost);
@@ -287,8 +233,8 @@ test('continue inner shadow-dom host searching after success with selector match
         //   </div>
         // </body>
 
-        const resString = window.scriptlets.invoke(params);
-        evalWrapper(resString);
+        const SELECTOR = '#inner';
+        runScriptlet(name, [SELECTOR]);
 
         const simpleElemCheck = testHost.shadowRoot.querySelector('div#simpleChild').querySelector('p#inner');
         const shadowElemCheck = testHost.shadowRoot.querySelector('div#shadowChild').shadowRoot.querySelector('span#inner');
@@ -296,10 +242,8 @@ test('continue inner shadow-dom host searching after success with selector match
         const shadowElemStyleDisplayProp = window.getComputedStyle(shadowElemCheck).display;
         assert.strictEqual(simpleElemStyleDisplayProp, 'none', `Element ${SELECTOR} hidden in first inner shadow dom`);
         assert.strictEqual(shadowElemStyleDisplayProp, 'none', `Element ${SELECTOR} hidden in second inner shadow dom`);
-        assert.strictEqual(window.hit, 'FIRED');
+        assert.strictEqual(window.hit, 'FIRED', 'hit fired');
         // clean up test elements
         elemsToClean.push(shadowInner, shadowChild, simpleInner, simpleChild, testHost);
-    } else {
-        assert.strictEqual(true, true, 'fake test to avoid qunit error');
-    }
-});
+    });
+}

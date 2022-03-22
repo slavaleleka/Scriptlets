@@ -9,6 +9,7 @@ import {
     setPropertyAccess,
     toRegExp,
     matchStackTrace,
+    nativeIsNaN,
 } from '../helpers';
 
 /* eslint-disable max-len */
@@ -46,29 +47,38 @@ import {
  *         - `falseFunc` - function returning false
  *         - `''` - empty string
  *         - `-1` - number value `-1`
- * - `stack` - optional, string or regular expression that must match the current function call stack trace
+ * - `stack` - optional, string or regular expression that must match the current function call stack trace;
+ * if regular expression is invalid it will be skipped
  *
  * **Examples**
  * ```
- * ! window.firstConst === false // this comparision will return false
- * example.org#%#//scriptlet('set-constant', 'firstConst', 'false')
+ * ! Any access to `window.first` will return `false`
+ * example.org#%#//scriptlet('set-constant', 'first', 'false')
  *
- * ! window.second() === trueFunc // 'second' call will return true
- * example.org#%#//scriptlet('set-constant', 'secondConst', 'trueFunc')
+ * ✔ window.first === false
+ * ```
  *
- * ! document.third() === falseFunc  // 'third' call will return false if the method is related to checking.js
- * example.org#%#//scriptlet('set-constant', 'secondConst', 'trueFunc', 'checking.js')
+ * ```
+ * ! Any call to `window.second()` will return `true`
+ * example.org#%#//scriptlet('set-constant', 'second', 'trueFunc')
+ *
+ * ✔ window.second() === true
+ * ✔ window.second.toString() === "function trueFunc() {return true;}"
+ * ```
+ *
+ * ```
+ * ! Any call to `document.third()` will return `true` if the method is related to `checking.js`
+ * example.org#%#//scriptlet('set-constant', 'document.third', 'trueFunc', 'checking.js')
+ *
+ * ✔ document.third() === true  // if the condition described above is met
  * ```
  */
 /* eslint-enable max-len */
 export function setConstant(source, property, value, stack) {
-    const stackRegexp = stack ? toRegExp(stack) : toRegExp('/.?/');
     if (!property
-        || !matchStackTrace(stackRegexp, new Error().stack)) {
+        || !matchStackTrace(stack, new Error().stack)) {
         return;
     }
-
-    const nativeIsNaN = Number.isNaN || window.isNaN; // eslint-disable-line compat/compat
 
     const emptyArr = noopArray();
     const emptyObj = noopObject();
@@ -133,7 +143,7 @@ export function setConstant(source, property, value, stack) {
                 const props = property.split('.');
                 const propIndex = props.indexOf(prop);
                 const baseName = props[propIndex - 1];
-                console.log(`set-constant failed because the property '${baseName}' does not exist`); // eslint-disable-line no-console
+                console.log(`set-constant failed because the property '${baseName}' does not exist`); // eslint-disable-line no-console, max-len
             }
             return;
         }
@@ -180,14 +190,15 @@ setConstant.names = [
     'abp-override-property-read',
 ];
 setConstant.injections = [
-    getPropertyInChain,
-    setPropertyAccess,
-    toRegExp,
-    matchStackTrace,
     hit,
     noopArray,
     noopObject,
     noopFunc,
     trueFunc,
     falseFunc,
+    getPropertyInChain,
+    setPropertyAccess,
+    toRegExp,
+    matchStackTrace,
+    nativeIsNaN,
 ];

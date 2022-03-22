@@ -1,5 +1,12 @@
 import {
-    hit, noopFunc, toRegExp, startsWith,
+    hit,
+    noopFunc,
+    parseMatchArg,
+    parseDelayArg,
+    // following helpers are needed for helpers above
+    toRegExp,
+    startsWith,
+    nativeIsNaN,
 } from '../helpers';
 
 /* eslint-disable max-len */
@@ -22,7 +29,7 @@ import {
  *
  * Call with no arguments will log calls to setInterval while debugging (`log-setInterval` superseding),
  * so production filter lists' rules definitely require at least one of the parameters:
- * - `search` - optional, string or regular expression.
+ * - `search` - optional, string or regular expression; invalid regular expression will be skipped and all callbacks will be matched.
  * If starts with `!`, scriptlet will not match the stringified callback but all other will be defused.
  * If do not start with `!`, the stringified callback will be matched.
  * If not set, prevents all `setInterval` calls due to specified `delay`.
@@ -30,6 +37,9 @@ import {
  * If starts with `!`, scriptlet will not match the delay but all other will be defused.
  * If do not start with `!`, the delay passed to the `setInterval` call will be matched.
  *
+ * > If `prevent-setInterval` without parameters logs smth like `setInterval(undefined, 1000)`,
+ * it means that no callback was passed to setInterval() and that's not scriptlet issue
+
  *  **Examples**
  * 1. Prevents `setInterval` calls if the callback matches `/\.test/` regardless of the delay.
  *     ```bash
@@ -102,51 +112,76 @@ import {
  */
 /* eslint-enable max-len */
 export function preventSetInterval(source, match, delay) {
+    // if browser does not support Proxy (e.g. Internet Explorer),
+    // we use none-proxy "legacy" wrapper for preventing
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy
+    const isProxySupported = typeof Proxy !== 'undefined';
+
     const nativeInterval = window.setInterval;
-    const nativeIsNaN = Number.isNaN || window.isNaN; // eslint-disable-line compat/compat
     const log = console.log.bind(console); // eslint-disable-line no-console
 
     // logs setIntervals to console if no arguments have been specified
     const shouldLog = ((typeof match === 'undefined') && (typeof delay === 'undefined'));
 
-    const INVERT_MARKER = '!';
+    const { isInvertedMatch, matchRegexp } = parseMatchArg(match);
+    const { isInvertedDelayMatch, delayMatch } = parseDelayArg(delay);
 
-    const isNotMatch = startsWith(match, INVERT_MARKER);
-    if (isNotMatch) {
-        match = match.slice(1);
-    }
-    const isNotDelay = startsWith(delay, INVERT_MARKER);
-    if (isNotDelay) {
-        delay = delay.slice(1);
-    }
-
-    delay = parseInt(delay, 10);
-    delay = nativeIsNaN(delay) ? null : delay;
-
-    match = match ? toRegExp(match) : toRegExp('/.?/');
-
-    const intervalWrapper = (callback, interval, ...args) => {
+    const getShouldPrevent = (callbackStr, interval) => {
         let shouldPrevent = false;
+        if (!delayMatch) {
+            shouldPrevent = matchRegexp.test(callbackStr) !== isInvertedMatch;
+        } else if (!match) {
+            shouldPrevent = (interval === delayMatch) !== isInvertedDelayMatch;
+        } else {
+            shouldPrevent = matchRegexp.test(callbackStr) !== isInvertedMatch
+                && (interval === delayMatch) !== isInvertedDelayMatch;
+        }
+        return shouldPrevent;
+    };
+
+    const legacyIntervalWrapper = (callback, interval, ...args) => {
+        let shouldPrevent = false;
+        // https://github.com/AdguardTeam/Scriptlets/issues/105
+        const cbString = String(callback);
         if (shouldLog) {
             hit(source);
-            log(`setInterval("${callback.toString()}", ${interval})`);
-        } else if (!delay) {
-            shouldPrevent = match.test(callback.toString()) !== isNotMatch;
-        } else if (match === '/.?/') {
-            shouldPrevent = (interval === delay) !== isNotDelay;
+            log(`setInterval(${cbString}, ${interval})`);
         } else {
-            shouldPrevent = match.test(callback.toString()) !== isNotMatch
-                && (interval === delay) !== isNotDelay;
+            shouldPrevent = getShouldPrevent(cbString, interval);
         }
-
         if (shouldPrevent) {
             hit(source);
             return nativeInterval(noopFunc, interval);
         }
-
         return nativeInterval.apply(window, [callback, interval, ...args]);
     };
-    window.setInterval = intervalWrapper;
+
+    const handlerWrapper = (target, thisArg, args) => {
+        const callback = args[0];
+        const interval = args[1];
+        let shouldPrevent = false;
+        // https://github.com/AdguardTeam/Scriptlets/issues/105
+        const cbString = String(callback);
+        if (shouldLog) {
+            hit(source);
+            log(`setInterval(${cbString}, ${interval})`);
+        } else {
+            shouldPrevent = getShouldPrevent(cbString, interval);
+        }
+        if (shouldPrevent) {
+            hit(source);
+            args[0] = noopFunc;
+        }
+        return target.apply(thisArg, args);
+    };
+
+    const setIntervalHandler = {
+        apply: handlerWrapper,
+    };
+
+    window.setInterval = isProxySupported
+        ? new Proxy(window.setInterval, setIntervalHandler)
+        : legacyIntervalWrapper;
 }
 
 preventSetInterval.names = [
@@ -166,4 +201,12 @@ preventSetInterval.names = [
     'ubo-sid',
 ];
 
-preventSetInterval.injections = [toRegExp, startsWith, hit, noopFunc];
+preventSetInterval.injections = [
+    hit,
+    noopFunc,
+    parseMatchArg,
+    parseDelayArg,
+    toRegExp,
+    startsWith,
+    nativeIsNaN,
+];

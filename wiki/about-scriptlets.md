@@ -2,8 +2,10 @@
 * [abort-current-inline-script](#abort-current-inline-script)
 * [abort-on-property-read](#abort-on-property-read)
 * [abort-on-property-write](#abort-on-property-write)
+* [abort-on-stack-trace](#abort-on-stack-trace)
 * [adjust-setInterval](#adjust-setInterval)
 * [adjust-setTimeout](#adjust-setTimeout)
+* [close-window](#close-window)
 * [debug-current-inline-script](#debug-current-inline-script)
 * [debug-on-property-read](#debug-on-property-read)
 * [debug-on-property-write](#debug-on-property-write)
@@ -13,7 +15,9 @@
 * [json-prune](#json-prune)
 * [log-addEventListener](#log-addEventListener)
 * [log-eval](#log-eval)
+* [log-on-stack-trace](#log-on-stack-trace)
 * [log](#log)
+* [no-floc](#no-floc)
 * [noeval](#noeval)
 * [nowebrtc](#nowebrtc)
 * [prevent-addEventListener](#prevent-addEventListener)
@@ -21,21 +25,28 @@
 * [prevent-bab](#prevent-bab)
 * [prevent-eval-if](#prevent-eval-if)
 * [prevent-fab-3.2.0](#prevent-fab-3.2.0)
+* [prevent-fetch](#prevent-fetch)
 * [prevent-popads-net](#prevent-popads-net)
 * [prevent-requestAnimationFrame](#prevent-requestAnimationFrame)
 * [prevent-setInterval](#prevent-setInterval)
 * [prevent-setTimeout](#prevent-setTimeout)
 * [prevent-window-open](#prevent-window-open)
+* [prevent-xhr](#prevent-xhr)
 * [remove-attr](#remove-attr)
 * [remove-class](#remove-class)
 * [remove-cookie](#remove-cookie)
+* [remove-in-shadow-dom](#remove-in-shadow-dom)
+* [set-attr](#set-attr)
 * [set-constant](#set-constant)
+* [set-cookie-reload](#set-cookie-reload)
 * [set-cookie](#set-cookie)
+* [set-local-storage-item](#set-local-storage-item)
 * [set-popads-dummy](#set-popads-dummy)
+* [set-session-storage-item](#set-session-storage-item)
 * * *
 ### <a id="abort-current-inline-script"></a> ⚡️ abort-current-inline-script
 
-Aborts an inline script when it attempts to **read** the specified property
+Aborts an inline script when it attempts to **read** or **write to** the specified property
 AND when the contents of the `<script>` element contains the specified
 text or matches the regular expression.
 
@@ -51,7 +62,9 @@ example.org#%#//scriptlet('abort-current-inline-script', property[, search])
 ```
 
 - `property` - required, path to a property (joined with `.` if needed). The property must be attached to `window`
-- `search` - optional, string or regular expression that must match the inline script contents. If not set, abort all inline scripts which are trying to access the specified property
+- `search` - optional, string or regular expression that must match the inline script content.
+Defaults to abort all scripts which are trying to access the specified property.
+Invalid regular expression will cause exit and rule will not work.
 
 > Note please that for inline script with addEventListener in it
 `property` should be set as `EventTarget.prototype.addEventListener`,
@@ -90,6 +103,7 @@ not just `addEventListener`.
     ```html
     <script>alert("Hi, little world");</script>
     ```
+
 [Scriptlet source](../src/scriptlets/abort-current-inline-script.js)
 * * *
 
@@ -105,11 +119,10 @@ https://github.com/adblockplus/adblockpluscore/blob/6b2a309054cc23432102b85d13f1
 
 **Syntax**
 ```
-example.org#%#//scriptlet('abort-on-property-read', property[, stack])
+example.org#%#//scriptlet('abort-on-property-read', property)
 ```
 
 - `property` - required, path to a property (joined with `.` if needed). The property must be attached to `window`
-- `stack` - optional, string or regular expression that must match the current function call stack trace
 
 **Examples**
 ```
@@ -118,10 +131,8 @@ example.org#%#//scriptlet('abort-on-property-read', 'alert')
 
 ! Aborts script when it tries to access `navigator.language`
 example.org#%#//scriptlet('abort-on-property-read', 'navigator.language')
-
-! Aborts script when it tries to access `window.adblock` and it's error stack trace contains `test.js`
-example.org#%#//scriptlet('abort-on-property-read', 'adblock', 'test.js')
 ```
+
 [Scriptlet source](../src/scriptlets/abort-on-property-read.js)
 * * *
 
@@ -137,21 +148,49 @@ https://github.com/adblockplus/adblockpluscore/blob/6b2a309054cc23432102b85d13f1
 
 **Syntax**
 ```
-example.org#%#//scriptlet('abort-on-property-write', property[, stack])
+example.org#%#//scriptlet('abort-on-property-write', property)
 ```
 
 - `property` - required, path to a property (joined with `.` if needed). The property must be attached to `window`
-- `stack` - optional, string or regular expression that must match the current function call stack trace
 
 **Examples**
 ```
 ! Aborts script when it tries to set `window.adblock` value
 example.org#%#//scriptlet('abort-on-property-write', 'adblock')
-
-! Aborts script when it tries to set `window.adblock` value and it's error stack trace contains `checking.js`
-example.org#%#//scriptlet('abort-on-property-write', 'adblock', 'checking.js')
 ```
+
 [Scriptlet source](../src/scriptlets/abort-on-property-write.js)
+* * *
+
+### <a id="abort-on-stack-trace"></a> ⚡️ abort-on-stack-trace
+
+Aborts a script when it attempts to utilize (read or write to) the specified property and it's error stack trace contains given value.
+
+Related UBO scriptlet:
+https://github.com/gorhill/uBlock-for-firefox-legacy/commit/7099186ae54e70b588d5e99554a05d783cabc8ff
+
+**Syntax**
+```
+example.com#%#//scriptlet('abort-on-stack-trace', property, stack)
+```
+
+- `property` - required, path to a property. The property must be attached to window.
+- `stack` - required, string that must match the current function call stack trace.
+
+**Examples**
+```
+! Aborts script when it tries to access `window.Ya` and it's error stack trace contains `test.js`
+example.org#%#//scriptlet('abort-on-stack-trace', 'Ya', 'test.js')
+
+! Aborts script when it tries to access `window.Ya.videoAd` and it's error stack trace contains `test.js`
+example.org#%#//scriptlet('abort-on-stack-trace', 'Ya.videoAd', 'test.js')
+
+! Aborts script when stack trace matches with any of these parameters
+example.org#%#//scriptlet('abort-on-stack-trace', 'Ya', 'yandexFuncName')
+example.org#%#//scriptlet('abort-on-stack-trace', 'Ya', 'yandexScriptName')
+```
+
+[Scriptlet source](../src/scriptlets/abort-on-stack-trace.js)
 * * *
 
 ### <a id="adjust-setInterval"></a> ⚡️ adjust-setInterval
@@ -166,8 +205,9 @@ https://github.com/gorhill/uBlock/wiki/Resources-Library#nano-setinterval-booste
 example.org#%#//scriptlet('adjust-setInterval'[, match [, interval[, boost]]])
 ```
 
-- `match` - optional, string/regular expression, matching in stringified callback function
-- `interval` - optional, defaults to 1000, decimal integer, matching setInterval delay
+- `match` - optional, string or regular expression for stringified callback matching;
+defaults to match all callbacks; invalid regular expression will cause exit and rule will not work
+- `interval` - optional, defaults to 1000, matching setInterval delay; decimal integer OR '*' for any delay
 - `boost` - optional, default to 0.05, float, capped at 50 times for up and down (0.02...50), interval multiplier
 
 **Examples**
@@ -176,12 +216,12 @@ example.org#%#//scriptlet('adjust-setInterval'[, match [, interval[, boost]]])
     example.org#%#//scriptlet('adjust-setInterval')
     ```
 
-2. Adjust all setInterval() x20 times where callback mathed with `example` and interval equal 1000ms
+2. Adjust all setInterval() x20 times where callback matched with `example` and interval equal 1000ms
     ```
     example.org#%#//scriptlet('adjust-setInterval', 'example')
     ```
 
-3. Adjust all setInterval() x20 times where callback mathed with `example` and interval equal 400ms
+3. Adjust all setInterval() x20 times where callback matched with `example` and interval equal 400ms
     ```
     example.org#%#//scriptlet('adjust-setInterval', 'example', '400')
     ```
@@ -190,16 +230,21 @@ example.org#%#//scriptlet('adjust-setInterval'[, match [, interval[, boost]]])
     ```
     example.org#%#//scriptlet('adjust-setInterval', 'example', '', '2')
     ```
-5.  Adjust all setInterval() x50 times where interval equal 2000ms
+5. Adjust all setInterval() x50 times where interval equal 2000ms
     ```
     example.org#%#//scriptlet('adjust-setInterval', '', '2000', '0.02')
     ```
+6. Adjust all setInterval() x50 times where interval is randomized
+    ```
+    example.org#%#//scriptlet('adjust-setInterval', '', '*', '0.02')
+    ```
+
 [Scriptlet source](../src/scriptlets/adjust-setInterval.js)
 * * *
 
 ### <a id="adjust-setTimeout"></a> ⚡️ adjust-setTimeout
 
-Adjusts timeout for specified setTimout() callbacks.
+Adjusts timeout for specified setTimeout() callbacks.
 
 Related UBO scriptlet:
 https://github.com/gorhill/uBlock/wiki/Resources-Library#nano-settimeout-boosterjs-
@@ -209,8 +254,9 @@ https://github.com/gorhill/uBlock/wiki/Resources-Library#nano-settimeout-booster
 example.org#%#//scriptlet('adjust-setTimeout'[, match [, timeout[, boost]]])
 ```
 
-- `match` - optional, string/regular expression, matching in stringified callback function
-- `timeout` - optional, defaults to 1000, decimal integer, matching setTimout delay
+- `match` - optional, string or regular expression for stringified callback matching;
+defaults to match all callbacks; invalid regular expression will cause exit and rule will not work
+- `timeout` - optional, defaults to 1000, matching setTimeout delay; decimal integer OR '*' for any delay
 - `boost` - optional, default to 0.05, float, capped at 50 times for up and down (0.02...50), timeout multiplier
 
 **Examples**
@@ -219,12 +265,12 @@ example.org#%#//scriptlet('adjust-setTimeout'[, match [, timeout[, boost]]])
     example.org#%#//scriptlet('adjust-setTimeout')
     ```
 
-2. Adjust all setTimeout() x20 times where callback mathed with `example` and timeout equal 1000ms
+2. Adjust all setTimeout() x20 times where callback matched with `example` and timeout equal 1000ms
     ```
     example.org#%#//scriptlet('adjust-setTimeout', 'example')
     ```
 
-3. Adjust all setTimeout() x20 times where callback mathed with `example` and timeout equal 400ms
+3. Adjust all setTimeout() x20 times where callback matched with `example` and timeout equal 400ms
     ```
     example.org#%#//scriptlet('adjust-setTimeout', 'example', '400')
     ```
@@ -233,11 +279,41 @@ example.org#%#//scriptlet('adjust-setTimeout'[, match [, timeout[, boost]]])
     ```
     example.org#%#//scriptlet('adjust-setTimeout', 'example', '', '2')
     ```
-5.  Adjust all setTimeout() x50 times where timeout equal 2000ms
+5. Adjust all setTimeout() x50 times where timeout equal 2000ms
     ```
     example.org#%#//scriptlet('adjust-setTimeout', '', '2000', '0.02')
     ```
+6. Adjust all setTimeout() x20 times where callback matched with `test` and timeout is randomized
+    ```
+    example.org#%#//scriptlet('adjust-setTimeout', 'test', '*')
+    ```
+
 [Scriptlet source](../src/scriptlets/adjust-setTimeout.js)
+* * *
+
+### <a id="close-window"></a> ⚡️ close-window
+
+Closes the browser tab immediately.
+
+**Syntax**
+```
+example.org#%#//scriptlet('close-window'[, path])
+```
+
+- `path` — optional, string or regular expression
+matching the current location's path: `window.location.pathname` + `window.location.search`.
+Defaults to execute on every page.
+
+**Examples**
+```
+! closes any example.org tab
+example.org#%#//scriptlet('close-window')
+
+! closes specific example.org tab
+example.org#%#//scriptlet('close-window', '/example-page.html')
+```
+
+[Scriptlet source](../src/scriptlets/close-window.js)
 * * *
 
 ### <a id="debug-current-inline-script"></a> ⚡️ debug-current-inline-script
@@ -251,6 +327,7 @@ This scriptlet is basically the same as [abort-current-inline-script](#abort-cur
 ! Aborts script when it tries to access `window.alert`
 example.org#%#//scriptlet('debug-current-inline-script', 'alert')
 ```
+
 [Scriptlet source](../src/scriptlets/debug-current-inline-script.js)
 * * *
 
@@ -267,6 +344,7 @@ example.org#%#//scriptlet('debug-on-property-read', 'alert')
 ! of `window.open`
 example.org#%#//scriptlet('debug-on-property-read', 'open')
 ```
+
 [Scriptlet source](../src/scriptlets/debug-on-property-read.js)
 * * *
 
@@ -281,6 +359,7 @@ This scriptlet is basically the same as [abort-on-property-write](#abort-on-prop
 ! Aborts script when it tries to write in property `window.test`
 example.org#%#//scriptlet('debug-on-property-write', 'test')
 ```
+
 [Scriptlet source](../src/scriptlets/debug-on-property-write.js)
 * * *
 
@@ -289,7 +368,7 @@ example.org#%#//scriptlet('debug-on-property-write', 'test')
 Wraps the `console.dir` API to call the `toString` method of the argument.
 There are several adblock circumvention systems that detect browser devtools
 and hide themselves. Therefore, if we force them to think
-that devtools are open (using this scrciptlet),
+that devtools are open (using this scriptlet),
 it will automatically disable the adblock circumvention script.
 
 Related ABP source:
@@ -306,6 +385,7 @@ example.org#%#//scriptlet('dir-string'[, times])
 ! Run 2 times
 example.org#%#//scriptlet('dir-string', '2')
 ```
+
 [Scriptlet source](../src/scriptlets/dir-string.js)
 * * *
 
@@ -320,6 +400,7 @@ https://github.com/gorhill/uBlock/wiki/Resources-Library#disable-newtab-linksjs-
 ```
 example.org#%#//scriptlet('disable-newtab-links')
 ```
+
 [Scriptlet source](../src/scriptlets/disable-newtab-links.js)
 * * *
 
@@ -347,6 +428,7 @@ virustotal.com#%#//scriptlet('hide-in-shadow-dom', 'iron-pages', 'vt-virustotal-
 ! hides floating element
 virustotal.com#%#//scriptlet('hide-in-shadow-dom', 'vt-ui-contact-fab')
 ```
+
 [Scriptlet source](../src/scriptlets/hide-in-shadow-dom.js)
 * * *
 
@@ -367,7 +449,8 @@ example.org#%#//scriptlet('json-prune'[, propsToRemove [, obligatoryProps [, sta
 
 - `propsToRemove` - optional, string of space-separated properties to remove
 - `obligatoryProps` - optional, string of space-separated properties which must be all present for the pruning to occur
-- `stack` - optional, string or regular expression that must match the current function call stack trace
+- `stack` - optional, string or regular expression that must match the current function call stack trace;
+if regular expression is invalid it will be skipped
 
 > Note please that you can use wildcard `*` for chain property name.
 e.g. 'ad.*.src' instead of 'ad.0.src ad.1.src ad.2.src ...'
@@ -401,7 +484,7 @@ e.g. 'ad.*.src' instead of 'ad.0.src ad.1.src ad.2.src ...'
     example.org#%#//scriptlet('json-prune', 'a.b', 'adpath.url.first')
     ```
 
-4. Removes property `content.ad` from the results of JSON.parse call it's error stack trace contains `test.js`
+4. Removes property `content.ad` from the results of JSON.parse call if its error stack trace contains `test.js`
     ```
     example.org#%#//scriptlet('json-prune', 'content.ad', '', 'test.js')
     ```
@@ -416,6 +499,7 @@ e.g. 'ad.*.src' instead of 'ad.0.src ad.1.src ad.2.src ...'
     ```
     example.org#%#//scriptlet('json-prune')
     ```
+
 [Scriptlet source](../src/scriptlets/json-prune.js)
 * * *
 
@@ -430,6 +514,7 @@ https://github.com/gorhill/uBlock/wiki/Resources-Library#addeventlistener-logger
 ```
 example.org#%#//scriptlet('log-addEventListener')
 ```
+
 [Scriptlet source](../src/scriptlets/log-addEventListener.js)
 * * *
 
@@ -441,7 +526,25 @@ Logs all `eval()` or `new Function()` calls to the console.
 ```
 example.org#%#//scriptlet('log-eval')
 ```
+
 [Scriptlet source](../src/scriptlets/log-eval.js)
+* * *
+
+### <a id="log-on-stack-trace"></a> ⚡️ log-on-stack-trace
+
+This scriptlet is basically the same as [abort-on-stack-trace](#abort-on-stack-trace), but instead of aborting it logs:
+- function and source script names pairs that access the given property
+- was that get or set attempt
+- script being injected or inline
+
+**Syntax**
+```
+example.com#%#//scriptlet('log-on-stack-trace', 'property')
+```
+
+- `property` - required, path to a property. The property must be attached to window.
+
+[Scriptlet source](../src/scriptlets/log-on-stack-trace.js)
 * * *
 
 ### <a id="log"></a> ⚡️ log
@@ -453,7 +556,23 @@ This scriptlet can be helpful for debugging and troubleshooting other scriptlets
 ```
 example.org#%#//scriptlet('log', 'arg1', 'arg2')
 ```
+
 [Scriptlet source](../src/scriptlets/log.js)
+* * *
+
+### <a id="no-floc"></a> ⚡️ no-floc
+
+Prevents using Google Chrome tracking feature called Federated Learning of Cohorts (aka "FLoC")
+
+Related UBO scriptlet:
+https://github.com/gorhill/uBlock/wiki/Resources-Library#no-flocjs-
+
+**Syntax**
+```
+example.org#%#//scriptlet('no-floc')
+```
+
+[Scriptlet source](../src/scriptlets/no-floc.js)
 * * *
 
 ### <a id="noeval"></a> ⚡️ noeval
@@ -471,12 +590,13 @@ See [redirect description](../wiki/about-redirects.md#noeval).
 ```
 example.org#%#//scriptlet('noeval')
 ```
+
 [Scriptlet source](../src/scriptlets/noeval.js)
 * * *
 
 ### <a id="nowebrtc"></a> ⚡️ nowebrtc
 
-Disables WebRTC by overriding `RTCPeerConnection`. The overriden function will log every attempt to create a new connection.
+Disables WebRTC by overriding `RTCPeerConnection`. The overridden function will log every attempt to create a new connection.
 
 Related UBO scriptlet:
 https://github.com/gorhill/uBlock/wiki/Resources-Library#nowebrtcjs-
@@ -485,6 +605,7 @@ https://github.com/gorhill/uBlock/wiki/Resources-Library#nowebrtcjs-
 ```
 example.org#%#//scriptlet('nowebrtc')
 ```
+
 [Scriptlet source](../src/scriptlets/nowebrtc.js)
 * * *
 
@@ -497,11 +618,13 @@ https://github.com/gorhill/uBlock/wiki/Resources-Library#addeventlistener-defuse
 
 **Syntax**
 ```
-example.org#%#//scriptlet('prevent-addEventListener'[, eventSearch[, functionSearch]])
+example.org#%#//scriptlet('prevent-addEventListener'[, typeSearch[, listenerSearch]])
 ```
 
-- `eventSearch` - optional, string or regex matching the event name. If not specified, the scriptlets prevents all event listeners
-- `functionSearch` - optional, string or regex matching the event listener function body. If not set, the scriptlet prevents all event listeners with event name matching `eventSearch`
+- `typeSearch` - optional, string or regular expression matching the type (event name);
+defaults to match all types; invalid regular expression will cause exit and rule will not work
+- `listenerSearch` - optional, string or regular expression matching the listener function body;
+defaults to match all listeners; invalid regular expression will cause exit and rule will not work
 
 **Examples**
 1. Prevent all `click` listeners:
@@ -520,6 +643,7 @@ example.org#%#//scriptlet('prevent-addEventListener'[, eventSearch[, functionSea
         window.test = 'searchString';
     });
 ```
+
 [Scriptlet source](../src/scriptlets/prevent-addEventListener.js)
 * * *
 
@@ -534,6 +658,7 @@ https://github.com/gorhill/uBlock/wiki/Resources-Library#adfly-defuserjs-
 ```
 example.org#%#//scriptlet('prevent-adfly')
 ```
+
 [Scriptlet source](../src/scriptlets/prevent-adfly.js)
 * * *
 
@@ -544,10 +669,14 @@ Prevents BlockAdblock script from detecting an ad blocker.
 Related UBO scriptlet:
 https://github.com/gorhill/uBlock/wiki/Resources-Library#bab-defuserjs-
 
+It also can be used as `$redirect` sometimes.
+See [redirect description](../wiki/about-redirects.md#prevent-bab).
+
 **Syntax**
 ```
 example.org#%#//scriptlet('prevent-bab')
 ```
+
 [Scriptlet source](../src/scriptlets/prevent-bab.js)
 * * *
 
@@ -563,14 +692,16 @@ https://github.com/gorhill/uBlock/wiki/Resources-Library#noeval-ifjs-
 example.org#%#//scriptlet('prevent-eval-if'[, search])
 ```
 
-- `search` - optional, string or regexp for matching stringified eval payload.
-If 'search is not specified — all stringified eval payload will be matched
+- `search` - optional, string or regular expression matching the stringified eval payload;
+defaults to match all stringified eval payloads;
+invalid regular expression will cause exit and rule will not work
 
 **Examples**
 ```
 ! Prevents eval if it matches 'test'
 example.org#%#//scriptlet('prevent-eval-if', 'test')
 ```
+
 [Scriptlet source](../src/scriptlets/prevent-eval-if.js)
 * * *
 
@@ -585,7 +716,53 @@ https://github.com/gorhill/uBlock/wiki/Resources-Library#fuckadblockjs-320-
 ```
 example.org#%#//scriptlet('prevent-fab-3.2.0')
 ```
+
 [Scriptlet source](../src/scriptlets/prevent-fab-3.2.0.js)
+* * *
+
+### <a id="prevent-fetch"></a> ⚡️ prevent-fetch
+
+Prevents `fetch` calls if **all** given parameters match
+
+Related UBO scriptlet:
+https://github.com/gorhill/uBlock/wiki/Resources-Library#no-fetch-ifjs-
+
+**Syntax**
+```
+example.org#%#//scriptlet('prevent-fetch'[, propsToMatch])
+```
+
+- `propsToMatch` - optional, string of space-separated properties to match; possible props:
+  - string or regular expression for matching the URL passed to fetch call; empty string, wildcard `*` or invalid regular expression will match all fetch calls
+  - colon-separated pairs `name:value` where
+    - `name` is [`init` option name](https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch#parameters)
+    - `value` is string or regular expression for matching the value of the option passed to fetch call; invalid regular expression will cause any value matching
+
+> Usage with no arguments will log fetch calls to browser console;
+which is useful for debugging but permitted for production filter lists.
+
+**Examples**
+1. Prevent all fetch calls
+    ```
+    example.org#%#//scriptlet('prevent-fetch', '*')
+    ```
+
+2. Prevent fetch call for specific url
+    ```
+    example.org#%#//scriptlet('prevent-fetch', '/url\\.part/')
+    ```
+
+3. Prevent fetch call for specific request method
+    ```
+    example.org#%#//scriptlet('prevent-fetch', 'method:HEAD')
+    ```
+
+4. Prevent fetch call for specific url and request method
+    ```
+    example.org#%#//scriptlet('prevent-fetch', '/specified_url_part/ method:/HEAD|GET/')
+    ```
+
+[Scriptlet source](../src/scriptlets/prevent-fetch.js)
 * * *
 
 ### <a id="prevent-popads-net"></a> ⚡️ prevent-popads-net
@@ -599,6 +776,7 @@ https://github.com/gorhill/uBlock/wiki/Resources-Library#popadsnetjs-
 ```
 example.org#%#//scriptlet('prevent-popads-net')
 ```
+
 [Scriptlet source](../src/scriptlets/prevent-popads-net.js)
 * * *
 
@@ -616,7 +794,7 @@ https://github.com/gorhill/uBlock/wiki/Resources-Library#no-requestanimationfram
 example.org#%#//scriptlet('prevent-requestAnimationFrame'[, search])
 ```
 
-- `search` - optional, string or regular expression.
+- `search` - optional, string or regular expression; invalid regular expression will be skipped and all callbacks will be matched.
 If starts with `!`, scriptlet will not match the stringified callback but all other will be defused.
 If do not start with `!`, the stringified callback will be matched.
 
@@ -666,6 +844,7 @@ So do not use the scriptlet without any parameter in production filter lists.
         }
     });
     ```
+
 [Scriptlet source](../src/scriptlets/prevent-requestAnimationFrame.js)
 * * *
 
@@ -686,13 +865,16 @@ example.org#%#//scriptlet('prevent-setInterval'[, search[, delay]])
 
 Call with no arguments will log calls to setInterval while debugging (`log-setInterval` superseding),
 so production filter lists' rules definitely require at least one of the parameters:
-- `search` - optional, string or regular expression.
+- `search` - optional, string or regular expression; invalid regular expression will be skipped and all callbacks will be matched.
 If starts with `!`, scriptlet will not match the stringified callback but all other will be defused.
 If do not start with `!`, the stringified callback will be matched.
 If not set, prevents all `setInterval` calls due to specified `delay`.
 - `delay` - optional, must be an integer.
 If starts with `!`, scriptlet will not match the delay but all other will be defused.
 If do not start with `!`, the delay passed to the `setInterval` call will be matched.
+
+> If `prevent-setInterval` without parameters logs smth like `setInterval(undefined, 1000)`,
+it means that no callback was passed to setInterval() and that's not scriptlet issue
 
  **Examples**
 1. Prevents `setInterval` calls if the callback matches `/\.test/` regardless of the delay.
@@ -763,6 +945,7 @@ If do not start with `!`, the delay passed to the `setInterval` call will be mat
         window.value = "test -- executed";
     }, 500);
     ```
+
 [Scriptlet source](../src/scriptlets/prevent-setInterval.js)
 * * *
 
@@ -783,13 +966,16 @@ example.org#%#//scriptlet('prevent-setTimeout'[, search[, delay]])
 
 Call with no arguments will log calls to setTimeout while debugging (`log-setTimeout` superseding),
 so production filter lists' rules definitely require at least one of the parameters:
-- `search` - optional, string or regular expression.
+- `search` - optional, string or regular expression; invalid regular expression will be skipped and all callbacks will be matched.
 If starts with `!`, scriptlet will not match the stringified callback but all other will be defused.
 If do not start with `!`, the stringified callback will be matched.
 If not set, prevents all `setTimeout` calls due to specified `delay`.
 - `delay` - optional, must be an integer.
 If starts with `!`, scriptlet will not match the delay but all other will be defused.
 If do not start with `!`, the delay passed to the `setTimeout` call will be matched.
+
+> If `prevent-setTimeout` without parameters logs smth like `setTimeout(undefined, 1000)`,
+it means that no callback was passed to setTimeout() and that's not scriptlet issue
 
 **Examples**
 1. Prevents `setTimeout` calls if the callback matches `/\.test/` regardless of the delay.
@@ -860,6 +1046,7 @@ If do not start with `!`, the delay passed to the `setTimeout` call will be matc
         window.value = "test -- executed";
     }, 500);
     ```
+
 [Scriptlet source](../src/scriptlets/prevent-setTimeout.js)
 * * *
 
@@ -872,14 +1059,21 @@ https://github.com/gorhill/uBlock/wiki/Resources-Library#windowopen-defuserjs-
 
 **Syntax**
 ```
-example.org#%#//scriptlet('prevent-window-open'[, match[, search[, replacement]]])
+example.org#%#//scriptlet('prevent-window-open'[, match[, delay[, replacement]]])
 ```
 
-- `match` - optional, defaults to "matching", any positive number or nothing for "matching", 0 or empty string for "not matching"
-- `search` - optional, string or regexp for matching the URL passed to `window.open` call; defaults to search all `window.open` call
-- `replacement` - optional, string to return prop value or property instead of window.open; defaults to return noopFunc
+- `match` - optional, string or regular expression. If not set or regular expression is invalid, all window.open calls will be matched.
+If starts with `!`, scriptlet will not match the stringified callback but all other will be defused.
+If do not start with `!`, the stringified callback will be matched.
+- `delay` - optional, number of seconds. If not set, scriptlet will return `null`,
+otherwise valid sham window object as injected `iframe` will be returned
+for accessing its methods (blur(), focus() etc.) and will be removed after the delay.
+- `replacement` - optional, string; one of the predefined constants:
+    - `obj` - for returning an object instead of default iframe;
+       for cases when the page requires a valid `window` instance to be returned
+    - `log` - for logging window.open calls; permitted for production filter lists.
 
-**Example**
+**Examples**
 1. Prevent all `window.open` calls:
 ```
     example.org#%#//scriptlet('prevent-window-open')
@@ -887,46 +1081,107 @@ example.org#%#//scriptlet('prevent-window-open'[, match[, search[, replacement]]
 
 2. Prevent `window.open` for all URLs containing `example`:
 ```
-    example.org#%#//scriptlet('prevent-window-open', '1', 'example')
+    example.org#%#//scriptlet('prevent-window-open', 'example')
 ```
 
 3. Prevent `window.open` for all URLs matching RegExp `/example\./`:
 ```
-    example.org#%#//scriptlet('prevent-window-open', '1', '/example\./')
+    example.org#%#//scriptlet('prevent-window-open', '/example\./')
 ```
 
 4. Prevent `window.open` for all URLs **NOT** containing `example`:
 ```
+    example.org#%#//scriptlet('prevent-window-open', '!example')
+```
+
+Old syntax of prevent-window-open parameters:
+- `match` - optional, defaults to "matching", any positive number or nothing for "matching", 0 or empty string for "not matching"
+- `search` - optional, string or regexp for matching the URL passed to `window.open` call; defaults to search all `window.open` call
+- `replacement` - optional, string to return prop value or property instead of window.open; defaults to return noopFunc.
+**Examples**
+```
+    example.org#%#//scriptlet('prevent-window-open', '1', '/example\./')
     example.org#%#//scriptlet('prevent-window-open', '0', 'example')
-```
-5. Prevent all `window.open` calls and return 'trueFunc' instead of it if website checks it:
-```
     example.org#%#//scriptlet('prevent-window-open', '', '', 'trueFunc')
-```
-6. Prevent all `window.open` and returns callback
-which returns object with property 'propName'=noopFunc
-as a property of window.open if website checks it:
-```
     example.org#%#//scriptlet('prevent-window-open', '1', '', '{propName=noopFunc}')
 ```
+
+> For better compatibility with uBO, old syntax is not recommended to use.
+
 [Scriptlet source](../src/scriptlets/prevent-window-open.js)
+* * *
+
+### <a id="prevent-xhr"></a> ⚡️ prevent-xhr
+
+Prevents `xhr` calls if **all** given parameters match.
+
+Related UBO scriptlet:
+https://github.com/gorhill/uBlock/wiki/Resources-Library#no-xhr-ifjs-
+
+**Syntax**
+```
+example.org#%#//scriptlet('prevent-xhr'[, propsToMatch])
+```
+
+- propsToMatch - optional, string of space-separated properties to match; possible props:
+  - string or regular expression for matching the URL passed to `.open()` call; empty string or wildcard * for all `.open()` calls match
+  - colon-separated pairs name:value where
+    - name is XMLHttpRequest object property name
+    - value is string or regular expression for matching the value of the option passed to `.open()` call
+
+> Usage with no arguments will log XMLHttpRequest objects to browser console;
+which is useful for debugging but permitted for production filter lists.
+
+**Examples**
+1. Log all XMLHttpRequests
+    ```
+    example.org#%#//scriptlet('prevent-xhr')
+    ```
+
+2. Prevent all XMLHttpRequests
+    ```
+    example.org#%#//scriptlet('prevent-xhr', '*')
+    example.org#%#//scriptlet('prevent-xhr', '')
+    ```
+
+3. Prevent XMLHttpRequests for specific url
+    ```
+    example.org#%#//scriptlet('prevent-xhr', 'example.org')
+    ```
+
+4. Prevent XMLHttpRequests for specific request method
+    ```
+    example.org#%#//scriptlet('prevent-xhr', 'method:HEAD')
+    ```
+
+5. Prevent XMLHttpRequests for specific url and specified request methods
+    ```
+    example.org#%#//scriptlet('prevent-xhr', 'example.org method:/HEAD|GET/')
+    ```
+
+[Scriptlet source](../src/scriptlets/prevent-xhr.js)
 * * *
 
 ### <a id="remove-attr"></a> ⚡️ remove-attr
 
 Removes the specified attributes from DOM nodes. This scriptlet runs once when the page loads
-and after that periodically in order to DOM tree changes.
+and after that periodically in order to DOM tree changes by default,
+or as specified by applying argument.
 
 Related UBO scriptlet:
 https://github.com/gorhill/uBlock/wiki/Resources-Library#remove-attrjs-
 
 **Syntax**
 ```
-example.org#%#//scriptlet('remove-attr', attrs[, selector])
+example.org#%#//scriptlet('remove-attr', attrs[, selector, applying])
 ```
 
 - `attrs` — required, attribute or list of attributes joined by '|'
 - `selector` — optional, CSS selector, specifies DOM nodes from which the attributes will be removed
+- `applying` — optional, one or more space-separated flags that describe the way scriptlet apply, defaults to 'asap stay'; possible flags:
+    - `asap` — runs as fast as possible **once**
+    - `complete` — runs **once** after the whole page has been loaded
+    - `stay` — as fast as possible **and** stays on the page observing possible DOM changes
 
 **Examples**
 1.  Removes by attribute
@@ -958,6 +1213,12 @@ example.org#%#//scriptlet('remove-attr', attrs[, selector])
         <div class="inner">Some text</div>
     </div>
     ```
+
+ 3. Using flags
+    ```
+    example.org#%#//scriptlet('remove-attr', 'example', 'html', 'asap complete')
+    ```
+
 [Scriptlet source](../src/scriptlets/remove-attr.js)
 * * *
 
@@ -971,12 +1232,16 @@ https://github.com/gorhill/uBlock/wiki/Resources-Library#remove-classjs-
 
 **Syntax**
 ```
-example.org#%#//scriptlet('remove-class', classes[, selector])
+example.org#%#//scriptlet('remove-class', classes[, selector, applying])
 ```
 
 - `classes` — required, class or list of classes separated by '|'
 - `selector` — optional, CSS selector, specifies DOM nodes from which the classes will be removed.
 If there is no `selector`, each class of `classes` independently will be removed from all nodes which has one
+- `applying` — optional, one or more space-separated flags that describe the way scriptlet apply, defaults to 'asap stay'; possible flags:
+    - `asap` — runs as fast as possible **once**
+    - `complete` — runs **once** after the whole page has been loaded
+    - `stay` — as fast as possible **and** stays on the page observing possible DOM changes
 
 **Examples**
 1.  Removes by classes
@@ -1012,6 +1277,12 @@ If there is no `selector`, each class of `classes` independently will be removed
         <div class="inner bad">Some text</div>
     </div>
     ```
+
+ 3. Using flags
+    ```
+    example.org#%#//scriptlet('remove-class', 'branding', 'div[class^="inner"]', 'asap complete')
+    ```
+
 [Scriptlet source](../src/scriptlets/remove-class.js)
 * * *
 
@@ -1044,7 +1315,81 @@ example.org#%#//scriptlet('remove-cookie'[, match])
     ```javascript
     document.cookie = '__example=randomValue';
     ```
+
 [Scriptlet source](../src/scriptlets/remove-cookie.js)
+* * *
+
+### <a id="remove-in-shadow-dom"></a> ⚡️ remove-in-shadow-dom
+
+Removes elements inside open shadow DOM elements.
+
+**Syntax**
+```
+example.org#%#//scriptlet('remove-in-shadow-dom', selector[, baseSelector])
+```
+
+- `selector` — required, CSS selector of element in shadow-dom to remove
+- `baseSelector` — optional, selector of specific page DOM element,
+narrows down the part of the page DOM where shadow-dom host supposed to be,
+defaults to document.documentElement
+
+> `baseSelector` should match element of the page DOM, but not of shadow DOM
+
+**Examples**
+```
+! removes menu bar
+virustotal.com#%#//scriptlet('remove-in-shadow-dom', 'iron-pages', 'vt-virustotal-app')
+
+! removes floating element
+virustotal.com#%#//scriptlet('remove-in-shadow-dom', 'vt-ui-contact-fab')
+```
+
+[Scriptlet source](../src/scriptlets/remove-in-shadow-dom.js)
+* * *
+
+### <a id="set-attr"></a> ⚡️ set-attr
+
+Sets the specified attribute on the specified elements. This scriptlet runs once when the page loads
+and after that and after that on DOM tree changes.
+
+**Syntax**
+```
+example.org#%#//scriptlet('set-attr', selector, attr[, value])
+```
+
+- `selector` — required, CSS selector, specifies DOM nodes to set attributes on
+- `attr` — required, attribute to be set
+- `value` — the value to assign to the attribute, defaults to ''. Possible values:
+    - `''` - empty string
+    - positive decimal integer `<= 32767`
+
+**Examples**
+1.  Set attribute by selector
+    ```
+    example.org#%#//scriptlet('set-attr', 'div.class > a.class', 'test-attribute', '0')
+    ```
+
+    ```html
+    <!-- before  -->
+    <a class="class">Some text</div>
+
+    <!-- after -->
+    <a class="class" test-attribute="0">Some text</div>
+    ```
+2.  Set attribute without value
+    ```
+    example.org#%#//scriptlet('set-attr', 'div.class > a.class', 'test-attribute')
+    ```
+
+    ```html
+    <!-- before  -->
+    <a class="class">Some text</div>
+
+    <!-- after -->
+    <a class="class" test-attribute>Some text</div>
+    ```
+
+[Scriptlet source](../src/scriptlets/set-attr.js)
 * * *
 
 ### <a id="set-constant"></a> ⚡️ set-constant
@@ -1079,20 +1424,63 @@ example.org#%#//scriptlet('set-constant', property, value[, stack])
         - `falseFunc` - function returning false
         - `''` - empty string
         - `-1` - number value `-1`
-- `stack` - optional, string or regular expression that must match the current function call stack trace
+- `stack` - optional, string or regular expression that must match the current function call stack trace;
+if regular expression is invalid it will be skipped
 
 **Examples**
 ```
-! window.firstConst === false // this comparision will return false
-example.org#%#//scriptlet('set-constant', 'firstConst', 'false')
+! Any access to `window.first` will return `false`
+example.org#%#//scriptlet('set-constant', 'first', 'false')
 
-! window.second() === trueFunc // 'second' call will return true
-example.org#%#//scriptlet('set-constant', 'secondConst', 'trueFunc')
-
-! document.third() === falseFunc  // 'third' call will return false if the method is related to checking.js
-example.org#%#//scriptlet('set-constant', 'secondConst', 'trueFunc', 'checking.js')
+✔ window.first === false
 ```
+
+```
+! Any call to `window.second()` will return `true`
+example.org#%#//scriptlet('set-constant', 'second', 'trueFunc')
+
+✔ window.second() === true
+✔ window.second.toString() === "function trueFunc() {return true;}"
+```
+
+```
+! Any call to `document.third()` will return `true` if the method is related to `checking.js`
+example.org#%#//scriptlet('set-constant', 'document.third', 'trueFunc', 'checking.js')
+
+✔ document.third() === true  // if the condition described above is met
+```
+
 [Scriptlet source](../src/scriptlets/set-constant.js)
+* * *
+
+### <a id="set-cookie-reload"></a> ⚡️ set-cookie-reload
+
+Sets a cookie with the specified name and value, and then reloads the current page.
+If reloading option is not needed, use [set-cookie](#set-cookie) scriptlet.
+
+**Syntax**
+```
+example.org#%#//scriptlet('set-cookie-reload', name, value)
+```
+
+- `name` - required, cookie name to be set
+- `value` - required, cookie value; possible values:
+    - number `>= 0 && <= 15`
+    - one of the predefined constants:
+        - `true` / `True`
+        - `false` / `False`
+        - `yes` / `Yes` / `Y`
+        - `no`
+        - `ok` / `OK`
+
+**Examples**
+```
+example.org#%#//scriptlet('set-cookie-reload', 'checking', 'ok')
+
+example.org#%#//scriptlet('set-cookie-reload', 'gdpr-settings-cookie', '1')
+```
+
+[Scriptlet source](../src/scriptlets/set-cookie-reload.js)
 * * *
 
 ### <a id="set-cookie"></a> ⚡️ set-cookie
@@ -1116,11 +1504,43 @@ example.org#%#//scriptlet('set-cookie', name, value)
 
 **Examples**
 ```
-example.org#%#//scriptlet('set-cookie', 'checking', 'ok')
+example.org#%#//scriptlet('set-cookie', 'ReadlyCookieConsent', '1')
 
-example.org#%#//scriptlet('set-cookie', 'gdpr-settings-cookie', '1')
+example.org#%#//scriptlet('set-cookie', 'gdpr-settings-cookie', 'true')
 ```
+
 [Scriptlet source](../src/scriptlets/set-cookie.js)
+* * *
+
+### <a id="set-local-storage-item"></a> ⚡️ set-local-storage-item
+
+Adds specified key and its value to localStorage object, or updates the value of the key if it already exists.
+
+**Syntax**
+```
+example.com#%#//scriptlet('set-local-storage-item', 'key', 'value')
+```
+
+- `key` — required, key name to be set.
+- `value` - required, key value; possible values:
+    - positive decimal integer `<= 32767`
+    - one of the predefined constants:
+        - `undefined`
+        - `false`
+        - `true`
+        - `null`
+        - `emptyObj` - empty object
+        - `emptyArr` - empty array
+        - `''` - empty string
+
+**Examples**
+```
+example.org#%#//scriptlet('set-local-storage-item', 'player.live.current.mute', 'false')
+
+example.org#%#//scriptlet('set-local-storage-item', 'exit-intent-marketing', '1')
+```
+
+[Scriptlet source](../src/scriptlets/set-local-storage-item.js)
 * * *
 
 ### <a id="set-popads-dummy"></a> ⚡️ set-popads-dummy
@@ -1134,6 +1554,38 @@ https://github.com/gorhill/uBlock/wiki/Resources-Library#popads-dummyjs-
 ```
 example.org#%#//scriptlet('set-popads-dummy')
 ```
+
 [Scriptlet source](../src/scriptlets/set-popads-dummy.js)
+* * *
+
+### <a id="set-session-storage-item"></a> ⚡️ set-session-storage-item
+
+Adds specified key and its value to sessionStorage object, or updates the value of the key if it already exists.
+
+**Syntax**
+```
+example.com#%#//scriptlet('set-session-storage-item', 'key', 'value')
+```
+
+- `key` — required, key name to be set.
+- `value` - required, key value; possible values:
+    - positive decimal integer `<= 32767`
+    - one of the predefined constants:
+        - `undefined`
+        - `false`
+        - `true`
+        - `null`
+        - `emptyObj` - empty object
+        - `emptyArr` - empty array
+        - `''` - empty string
+
+**Examples**
+```
+example.org#%#//scriptlet('set-session-storage-item', 'player.live.current.mute', 'false')
+
+example.org#%#//scriptlet('set-session-storage-item', 'exit-intent-marketing', '1')
+```
+
+[Scriptlet source](../src/scriptlets/set-session-storage-item.js)
 * * *
 

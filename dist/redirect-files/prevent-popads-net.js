@@ -48,7 +48,8 @@ function hit(source, message) {
 
     try {
       var log = console.log.bind(console);
-      var trace = console.trace.bind(console);
+      var trace = console.trace.bind(console); // eslint-disable-line compat/compat
+
       var prefix = source.ruleText || '';
 
       if (source.domainName) {
@@ -97,6 +98,10 @@ function hit(source, message) {
     }
   };
         const updatedArgs = args ? [].concat(source).concat(args) : [source];
-        preventPopadsNet.apply(this, updatedArgs);
+        try {
+            preventPopadsNet.apply(this, updatedArgs);
+        } catch (e) {
+            console.log(e);
+        }
     
 })({"name":"prevent-popads-net","args":[]}, []);

@@ -1,34 +1,15 @@
 (function(source, args){
-function GoogleTagManagerGtm(source) {
-    window.ga = window.ga || noopFunc;
-    var _window = window,
-        dataLayer = _window.dataLayer,
-        google_optimize = _window.google_optimize; // eslint-disable-line camelcase
+function Gemius(source) {
+    var GemiusPlayer = function GemiusPlayer() {};
 
-    if (dataLayer instanceof Object === false) {
-      return;
-    }
-
-    if (dataLayer.hide instanceof Object && typeof dataLayer.hide.end === 'function') {
-      dataLayer.hide.end();
-    }
-
-    if (typeof dataLayer.push === 'function') {
-      dataLayer.push = function (data) {
-        if (data instanceof Object && typeof data.eventCallback === 'function') {
-          setTimeout(data.eventCallback, 1);
-        }
-      };
-    } // https://github.com/AdguardTeam/Scriptlets/issues/81
-
-
-    if (google_optimize instanceof Object && typeof google_optimize.get === 'function') {
-      // eslint-disable-line camelcase
-      var googleOptimizeWrapper = {};
-      googleOptimizeWrapper.get = noopFunc;
-      window.google_optimize = googleOptimizeWrapper;
-    }
-
+    GemiusPlayer.prototype = {
+      setVideoObject: noopFunc,
+      newProgram: noopFunc,
+      programEvent: noopFunc,
+      newAd: noopFunc,
+      adEvent: noopFunc
+    };
+    window.GemiusPlayer = GemiusPlayer;
     hit(source);
   }
 function hit(source, message) {
@@ -38,7 +19,8 @@ function hit(source, message) {
 
     try {
       var log = console.log.bind(console);
-      var trace = console.trace.bind(console);
+      var trace = console.trace.bind(console); // eslint-disable-line compat/compat
+
       var prefix = source.ruleText || '';
 
       if (source.domainName) {
@@ -88,6 +70,10 @@ function hit(source, message) {
   }
 function noopFunc() {};
         const updatedArgs = args ? [].concat(source).concat(args) : [source];
-        GoogleTagManagerGtm.apply(this, updatedArgs);
+        try {
+            Gemius.apply(this, updatedArgs);
+        } catch (e) {
+            console.log(e);
+        }
     
-})({"name":"googletagmanager-gtm","args":[]}, []);
+})({"name":"gemius","args":[]}, []);

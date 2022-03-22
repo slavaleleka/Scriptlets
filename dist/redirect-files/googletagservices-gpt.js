@@ -2,8 +2,10 @@
 function GoogleTagServicesGpt(source) {
     var companionAdsService = {
       addEventListener: noopThis,
+      removeEventListener: noopThis,
       enableSyncLoading: noopFunc,
-      setRefreshUnfilledSlots: noopFunc
+      setRefreshUnfilledSlots: noopFunc,
+      getSlots: noopArray
     };
     var contentService = {
       addEventListener: noopThis,
@@ -35,7 +37,7 @@ function GoogleTagServicesGpt(source) {
     Slot.prototype.clearTargeting = noopThis;
     Slot.prototype.defineSizeMapping = noopThis;
     Slot.prototype.get = noopNull;
-    Slot.prototype.getAdUnitPath = noopArray;
+    Slot.prototype.getAdUnitPath = noopStr;
     Slot.prototype.getAttributeKeys = noopArray;
     Slot.prototype.getCategoryExclusions = noopArray;
     Slot.prototype.getDomId = noopStr;
@@ -64,12 +66,13 @@ function GoogleTagServicesGpt(source) {
       disableInitialLoad: noopFunc,
       display: noopFunc,
       enableAsyncRendering: noopFunc,
+      enableLazyLoad: noopFunc,
       enableSingleRequest: noopFunc,
       enableSyncRendering: noopFunc,
       enableVideoAds: noopFunc,
       get: noopNull,
       getAttributeKeys: noopArray,
-      getTargeting: noopFunc,
+      getTargeting: noopArray,
       getTargetingKeys: noopArray,
       getSlots: noopArray,
       refresh: noopFunc,
@@ -151,7 +154,8 @@ function hit(source, message) {
 
     try {
       var log = console.log.bind(console);
-      var trace = console.trace.bind(console);
+      var trace = console.trace.bind(console); // eslint-disable-line compat/compat
+
       var prefix = source.ruleText || '';
 
       if (source.domainName) {
@@ -213,6 +217,10 @@ function noopStr() {
     return '';
   };
         const updatedArgs = args ? [].concat(source).concat(args) : [source];
-        GoogleTagServicesGpt.apply(this, updatedArgs);
+        try {
+            GoogleTagServicesGpt.apply(this, updatedArgs);
+        } catch (e) {
+            console.log(e);
+        }
     
 })({"name":"googletagservices-gpt","args":[]}, []);

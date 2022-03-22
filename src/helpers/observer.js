@@ -1,9 +1,9 @@
 /**
  * DOM tree changes observer. Used for 'remove-attr' and 'remove-class' scriptlets
  * @param {Function} callback
- * @param {Boolean} observeAttrs - optional parameter - should observer check attibutes changes
+ * @param {Boolean} observeAttrs - optional parameter - should observer check attributes changes
  */
-export const observeDOMChanges = (callback, observeAttrs = false, attrsToObserv = []) => {
+export const observeDOMChanges = (callback, observeAttrs = false, attrsToObserve = []) => {
     /**
      * Returns a wrapper, passing the call to 'method' at maximum once per 'delay' milliseconds.
      * Those calls that fall into the "cooldown" period, are ignored
@@ -38,16 +38,16 @@ export const observeDOMChanges = (callback, observeAttrs = false, attrsToObserv 
     /**
      * Used for remove-class
      */
-    // eslint-disable-next-line no-use-before-define
+    // eslint-disable-next-line no-use-before-define, compat/compat
     const observer = new MutationObserver(throttle(callbackWrapper, THROTTLE_DELAY_MS));
 
     const connect = () => {
-        if (attrsToObserv.length > 0) {
+        if (attrsToObserve.length > 0) {
             observer.observe(document.documentElement, {
                 childList: true,
                 subtree: true,
                 attributes: observeAttrs,
-                attributeFilter: attrsToObserv,
+                attributeFilter: attrsToObserve,
             });
         } else {
             observer.observe(document.documentElement, {

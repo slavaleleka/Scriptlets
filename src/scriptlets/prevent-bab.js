@@ -10,6 +10,9 @@ import { hit } from '../helpers';
  * Related UBO scriptlet:
  * https://github.com/gorhill/uBlock/wiki/Resources-Library#bab-defuserjs-
  *
+ * It also can be used as `$redirect` sometimes.
+ * See [redirect description](../wiki/about-redirects.md#prevent-bab).
+ *
  * **Syntax**
  * ```
  * example.org#%#//scriptlet('prevent-bab')
@@ -19,12 +22,13 @@ export function preventBab(source) {
     const nativeSetTimeout = window.setTimeout;
     const babRegex = /\.bab_elementid.$/;
 
-    window.setTimeout = (callback, ...args) => {
+    const timeoutWrapper = (callback, ...args) => {
         if (typeof callback !== 'string' || !babRegex.test(callback)) {
-            return nativeSetTimeout.call(this, callback, ...args);
+            return nativeSetTimeout.apply(window, [callback, ...args]);
         }
         hit(source);
     };
+    window.setTimeout = timeoutWrapper;
 
     const signatures = [
         ['blockadblock'],
@@ -33,6 +37,9 @@ export function preventBab(source) {
         ['getElementById', 'String.fromCharCode', 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', 'charAt', 'DOMContentLoaded', 'AdBlock', 'addEventListener', 'doScroll', 'fromCharCode', '<<2|r>>4', 'sessionStorage', 'clientWidth', 'localStorage', 'Math', 'random'],
     ];
     const check = (str) => {
+        if (typeof str !== 'string') {
+            return false;
+        }
         for (let i = 0; i < signatures.length; i += 1) {
             const tokens = signatures[i];
             let match = 0;
@@ -51,7 +58,8 @@ export function preventBab(source) {
     };
 
     const nativeEval = window.eval;
-    window.eval = (str) => {
+
+    const evalWrapper = (str) => {
         if (!check(str)) {
             return nativeEval(str);
         }
@@ -65,6 +73,7 @@ export function preventBab(source) {
             el.parentNode.removeChild(el);
         }
     };
+    window.eval = evalWrapper.bind(window);
 }
 
 preventBab.names = [

@@ -1,24 +1,26 @@
-/* eslint-disable no-eval, no-underscore-dangle */
-import { clearGlobalProps } from '../helpers';
+/* eslint-disable no-underscore-dangle */
+import {
+    runScriptlet,
+    clearGlobalProps,
+    getRandomNumber,
+} from '../helpers';
 
 const { test, module } = QUnit;
 const name = 'adjust-setInterval';
 const nativeSetInterval = window.setInterval;
+
+const beforeEach = () => {
+    window.__debug = () => {
+        window.hit = 'FIRED';
+    };
+};
 
 const afterEach = () => {
     window.setInterval = nativeSetInterval;
     clearGlobalProps('hit', '__debug', 'intervalValue', 'someKey');
 };
 
-module(name, { afterEach });
-
-const createHit = () => {
-    window.__debug = () => {
-        window.hit = 'FIRED';
-    };
-};
-
-const evalWrapper = eval;
+module(name, { beforeEach, afterEach });
 
 test('Checking if alias name works', (assert) => {
     const adgParams = {
@@ -38,16 +40,8 @@ test('Checking if alias name works', (assert) => {
     assert.strictEqual(codeByAdgParams, codeByUboParams, 'ubo name - ok');
 });
 
-test('Adg no args', (assert) => {
-    createHit();
-    const params = {
-        name,
-        args: [],
-        verbose: true,
-    };
-
-    const resString = window.scriptlets.invoke(params);
-    evalWrapper(resString);
+test('no args', (assert) => {
+    runScriptlet(name);
 
     const done = assert.async();
 
@@ -62,16 +56,9 @@ test('Adg no args', (assert) => {
     }, 100);
 });
 
-test('Adg: match param', (assert) => {
-    createHit();
-    const params = {
-        name,
-        args: ['intervalValue'],
-        verbose: true,
-    };
-
-    const resString = window.scriptlets.invoke(params);
-    evalWrapper(resString);
+test('only match param', (assert) => {
+    const scriptletArgs = ['intervalValue'];
+    runScriptlet(name, scriptletArgs);
 
     const done1 = assert.async();
     const done2 = assert.async();
@@ -103,16 +90,9 @@ test('Adg: match param', (assert) => {
     }, 250);
 });
 
-test('Adg: match param and interval', (assert) => {
-    createHit();
-    const params = {
-        name,
-        args: ['intervalValue', '500'],
-        verbose: true,
-    };
-
-    const resString = window.scriptlets.invoke(params);
-    evalWrapper(resString);
+test('match param + interval', (assert) => {
+    const scriptletArgs = ['intervalValue', '500'];
+    runScriptlet(name, scriptletArgs);
 
     const done = assert.async();
 
@@ -127,16 +107,9 @@ test('Adg: match param and interval', (assert) => {
     }, 50);
 });
 
-test('Adg: all params, boost > 1 -- slowing', (assert) => {
-    createHit();
-    const params = {
-        name,
-        args: ['intervalValue', '100', '2'],
-        verbose: true,
-    };
-
-    const resString = window.scriptlets.invoke(params);
-    evalWrapper(resString);
+test('all params, boost > 1 (slowing)', (assert) => {
+    const scriptletArgs = ['intervalValue', '100', '2'];
+    runScriptlet(name, scriptletArgs);
 
     const done1 = assert.async();
     const done2 = assert.async();
@@ -157,16 +130,9 @@ test('Adg: all params, boost > 1 -- slowing', (assert) => {
     }, 250);
 });
 
-test('Adg: all params, boost < 1 -- boosting', (assert) => {
-    createHit();
-    const params = {
-        name,
-        args: ['intervalValue', '500', '0.2'],
-        verbose: true,
-    };
-
-    const resString = window.scriptlets.invoke(params);
-    evalWrapper(resString);
+test('all params, boost < 1 (boosting)', (assert) => {
+    const scriptletArgs = ['intervalValue', '500', '0.2'];
+    runScriptlet(name, scriptletArgs);
 
     const done1 = assert.async();
     const done2 = assert.async();
@@ -187,16 +153,9 @@ test('Adg: all params, boost < 1 -- boosting', (assert) => {
     }, 150);
 });
 
-test('Adg: all params, invalid boost value --> 0.05 by default', (assert) => {
-    createHit();
-    const params = {
-        name,
-        args: ['intervalValue', '1000', 'abc'],
-        verbose: true,
-    };
-
-    const resString = window.scriptlets.invoke(params);
-    evalWrapper(resString);
+test('all params, invalid boost value --> 0.05 by default', (assert) => {
+    const scriptletArgs = ['intervalValue', '1000', 'abc'];
+    runScriptlet(name, scriptletArgs);
 
     const done1 = assert.async();
     const done2 = assert.async();
@@ -215,4 +174,96 @@ test('Adg: all params, invalid boost value --> 0.05 by default', (assert) => {
         clearTimeout(interval);
         done2();
     }, 80);
+});
+
+test('match param + interval', (assert) => {
+    const scriptletArgs = ['intervalValue', '*'];
+    runScriptlet(name, scriptletArgs);
+
+    const done = assert.async();
+
+    const randomDelay = getRandomNumber(400, 500);
+    const interval = setInterval(() => {
+        window.intervalValue = 'value';
+    }, randomDelay);
+
+    setTimeout(() => {
+        assert.strictEqual(window.intervalValue, 'value', 'Should be defined because default boost value equal 0.05');
+        clearInterval(interval);
+        done();
+    }, 50);
+});
+
+test('all params, boost < 1 (boosting)', (assert) => {
+    const scriptletArgs = ['intervalValue', '*', '0.2'];
+    runScriptlet(name, scriptletArgs);
+
+    const done1 = assert.async();
+    const done2 = assert.async();
+
+    const randomDelay = getRandomNumber(450, 500);
+    const interval = setInterval(() => {
+        window.intervalValue = 'value';
+    }, randomDelay); // scriptlet should divide delay by 5
+
+    setTimeout(() => {
+        assert.notOk(window.intervalValue, 'Still not defined');
+        done1();
+    }, 50);
+
+    setTimeout(() => {
+        assert.strictEqual(window.intervalValue, 'value', 'Should be defined');
+        clearInterval(interval);
+        done2();
+    }, 150);
+});
+
+test('no match', (assert) => {
+    const scriptletArgs = ['no_match'];
+    runScriptlet(name, scriptletArgs);
+
+    const done1 = assert.async();
+    const done2 = assert.async();
+
+    const testValue = 'value';
+
+    const testInterval = setInterval(() => {
+        window.someKey = testValue;
+    }, 100);
+
+    setTimeout(() => {
+        assert.strictEqual(window.someKey, undefined, 'Should not be defined yet');
+        done1();
+    }, 50);
+
+    setTimeout(() => {
+        assert.strictEqual(window.someKey, testValue, 'Should not be matched and work fine');
+        clearInterval(testInterval);
+        done2();
+    }, 150);
+});
+
+test('no match -- invalid regexp pattern', (assert) => {
+    const scriptletArgs = ['/\\/'];
+    runScriptlet(name, scriptletArgs, false);
+
+    const done1 = assert.async();
+    const done2 = assert.async();
+
+    const testValue = 'value';
+
+    const testInterval = setInterval(() => {
+        window.someKey = testValue;
+    }, 100);
+
+    setTimeout(() => {
+        assert.strictEqual(window.someKey, undefined, 'Should not be defined yet');
+        done1();
+    }, 50);
+
+    setTimeout(() => {
+        assert.strictEqual(window.someKey, testValue, 'Should not be matched and work fine');
+        clearInterval(testInterval);
+        done2();
+    }, 150);
 });

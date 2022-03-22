@@ -1,7 +1,7 @@
 /* global sinon */
-/* eslint-disable no-eval, no-underscore-dangle */
+/* eslint-disable no-underscore-dangle */
 
-import { clearGlobalProps } from '../helpers';
+import { runScriptlet, clearGlobalProps } from '../helpers';
 
 const { test, module } = QUnit;
 const name = 'set-popads-dummy';
@@ -18,17 +18,6 @@ const afterEach = () => {
     clearGlobalProps('hit', '__debug', popAdsProp, popnsProp);
 };
 module(name, { beforeEach, afterEach });
-
-const evalWrapper = eval;
-
-const runScriptlet = (name) => {
-    const params = {
-        name,
-        verbose: true,
-    };
-    const resultString = window.scriptlets.invoke(params);
-    evalWrapper(resultString);
-};
 
 const fillPopAdsWithValues = () => {
     window[popAdsProp] = popAdsProp;
@@ -55,7 +44,8 @@ test('Checking if alias name works', (assert) => {
     assert.strictEqual(codeByAdgParams, codeByUboParams, 'ubo name - ok');
 });
 
-test('works', (assert) => {
+test('set-popads-dummy: works', (assert) => {
+    assert.expect(5);
     fillPopAdsWithValues();
     assert.strictEqual(window[popAdsProp], popAdsProp);
     assert.strictEqual(window[popnsProp], popnsProp);
@@ -65,7 +55,8 @@ test('works', (assert) => {
     assert.strictEqual(window.hit, 'FIRED');
 });
 
-test('ag works', (assert) => {
+test('set-popads-dummy: ag works', (assert) => {
+    assert.expect(2);
     const stub = sinon.stub(Object, 'defineProperties').callsFake((obj, props) => props);
     runScriptlet(name);
 

@@ -24,6 +24,10 @@ function preventFab(source) {
     };
 
     Fab.prototype.setOption = noopFunc;
+    Fab.prototype.options = {
+      set: noopFunc,
+      get: noopFunc
+    };
     var fab = new Fab();
     var getSetFab = {
       get: function get() {
@@ -82,7 +86,8 @@ function hit(source, message) {
 
     try {
       var log = console.log.bind(console);
-      var trace = console.trace.bind(console);
+      var trace = console.trace.bind(console); // eslint-disable-line compat/compat
+
       var prefix = source.ruleText || '';
 
       if (source.domainName) {
@@ -135,6 +140,10 @@ function noopThis() {
     return this;
   };
         const updatedArgs = args ? [].concat(source).concat(args) : [source];
-        preventFab.apply(this, updatedArgs);
+        try {
+            preventFab.apply(this, updatedArgs);
+        } catch (e) {
+            console.log(e);
+        }
     
 })({"name":"prevent-fab-3.2.0","args":[]}, []);

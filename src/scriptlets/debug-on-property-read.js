@@ -4,8 +4,6 @@ import {
     getPropertyInChain,
     createOnErrorHandler,
     hit,
-    toRegExp,
-    matchStackTrace,
     noopFunc,
 } from '../helpers';
 
@@ -27,10 +25,8 @@ import {
  * ```
  */
 /* eslint-enable max-len */
-export function debugOnPropertyRead(source, property, stack) {
-    const stackRegexp = stack ? toRegExp(stack) : toRegExp('/.?/');
-    if (!property
-        || !matchStackTrace(stackRegexp, new Error().stack)) {
+export function debugOnPropertyRead(source, property) {
+    if (!property) {
         return;
     }
     const rid = randomId();
@@ -77,7 +73,5 @@ debugOnPropertyRead.injections = [
     getPropertyInChain,
     createOnErrorHandler,
     hit,
-    toRegExp,
-    matchStackTrace,
     noopFunc,
 ];

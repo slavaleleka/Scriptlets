@@ -1,5 +1,12 @@
 import {
-    hit, noopFunc, toRegExp, startsWith,
+    hit,
+    noopFunc,
+    parseMatchArg,
+    parseDelayArg,
+    // following helpers are needed for helpers above
+    toRegExp,
+    startsWith,
+    nativeIsNaN,
 } from '../helpers';
 
 /* eslint-disable max-len */
@@ -22,13 +29,16 @@ import {
  *
  * Call with no arguments will log calls to setTimeout while debugging (`log-setTimeout` superseding),
  * so production filter lists' rules definitely require at least one of the parameters:
- * - `search` - optional, string or regular expression.
+ * - `search` - optional, string or regular expression; invalid regular expression will be skipped and all callbacks will be matched.
  * If starts with `!`, scriptlet will not match the stringified callback but all other will be defused.
  * If do not start with `!`, the stringified callback will be matched.
  * If not set, prevents all `setTimeout` calls due to specified `delay`.
  * - `delay` - optional, must be an integer.
  * If starts with `!`, scriptlet will not match the delay but all other will be defused.
  * If do not start with `!`, the delay passed to the `setTimeout` call will be matched.
+ *
+ * > If `prevent-setTimeout` without parameters logs smth like `setTimeout(undefined, 1000)`,
+ * it means that no callback was passed to setTimeout() and that's not scriptlet issue
  *
  * **Examples**
  * 1. Prevents `setTimeout` calls if the callback matches `/\.test/` regardless of the delay.
@@ -102,51 +112,76 @@ import {
  */
 /* eslint-enable max-len */
 export function preventSetTimeout(source, match, delay) {
+    // if browser does not support Proxy (e.g. Internet Explorer),
+    // we use none-proxy "legacy" wrapper for preventing
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy
+    const isProxySupported = typeof Proxy !== 'undefined';
+
     const nativeTimeout = window.setTimeout;
-    const nativeIsNaN = Number.isNaN || window.isNaN; // eslint-disable-line compat/compat
     const log = console.log.bind(console); // eslint-disable-line no-console
 
     // logs setTimeouts to console if no arguments have been specified
     const shouldLog = ((typeof match === 'undefined') && (typeof delay === 'undefined'));
 
-    const INVERT_MARKER = '!';
+    const { isInvertedMatch, matchRegexp } = parseMatchArg(match);
+    const { isInvertedDelayMatch, delayMatch } = parseDelayArg(delay);
 
-    const isNotMatch = startsWith(match, INVERT_MARKER);
-    if (isNotMatch) {
-        match = match.slice(1);
-    }
-    const isNotDelay = startsWith(delay, INVERT_MARKER);
-    if (isNotDelay) {
-        delay = delay.slice(1);
-    }
-
-    delay = parseInt(delay, 10);
-    delay = nativeIsNaN(delay) ? null : delay;
-
-    match = match ? toRegExp(match) : toRegExp('/.?/');
-
-    const timeoutWrapper = (callback, timeout, ...args) => {
+    const getShouldPrevent = (callbackStr, timeout) => {
         let shouldPrevent = false;
+        if (!delayMatch) {
+            shouldPrevent = matchRegexp.test(callbackStr) !== isInvertedMatch;
+        } else if (!match) {
+            shouldPrevent = (timeout === delayMatch) !== isInvertedDelayMatch;
+        } else {
+            shouldPrevent = matchRegexp.test(callbackStr) !== isInvertedMatch
+                && (timeout === delayMatch) !== isInvertedDelayMatch;
+        }
+        return shouldPrevent;
+    };
+
+    const legacyTimeoutWrapper = (callback, timeout, ...args) => {
+        let shouldPrevent = false;
+        // https://github.com/AdguardTeam/Scriptlets/issues/105
+        const cbString = String(callback);
         if (shouldLog) {
             hit(source);
-            log(`setTimeout("${callback.toString()}", ${timeout})`);
-        } else if (!delay) {
-            shouldPrevent = match.test(callback.toString()) !== isNotMatch;
-        } else if (match === '/.?/') {
-            shouldPrevent = (timeout === delay) !== isNotDelay;
+            log(`setTimeout(${cbString}, ${timeout})`);
         } else {
-            shouldPrevent = match.test(callback.toString()) !== isNotMatch
-                && (timeout === delay) !== isNotDelay;
+            shouldPrevent = getShouldPrevent(cbString, timeout);
         }
-
         if (shouldPrevent) {
             hit(source);
             return nativeTimeout(noopFunc, timeout);
         }
-
         return nativeTimeout.apply(window, [callback, timeout, ...args]);
     };
-    window.setTimeout = timeoutWrapper;
+
+    const handlerWrapper = (target, thisArg, args) => {
+        const callback = args[0];
+        const timeout = args[1];
+        let shouldPrevent = false;
+        // https://github.com/AdguardTeam/Scriptlets/issues/105
+        const cbString = String(callback);
+        if (shouldLog) {
+            hit(source);
+            log(`setTimeout(${cbString}, ${timeout})`);
+        } else {
+            shouldPrevent = getShouldPrevent(cbString, timeout);
+        }
+        if (shouldPrevent) {
+            hit(source);
+            args[0] = noopFunc;
+        }
+        return target.apply(thisArg, args);
+    };
+
+    const setTimeoutHandler = {
+        apply: handlerWrapper,
+    };
+
+    window.setTimeout = isProxySupported
+        ? new Proxy(window.setTimeout, setTimeoutHandler)
+        : legacyTimeoutWrapper;
 }
 
 preventSetTimeout.names = [
@@ -154,16 +189,27 @@ preventSetTimeout.names = [
     // aliases are needed for matching the related scriptlet converted into our syntax
     'no-setTimeout-if.js', // new implementation of setTimeout-defuser.js
     'ubo-no-setTimeout-if.js',
-    'setTimeout-defuser.js', // old name should be supported as well
-    'ubo-setTimeout-defuser.js',
     'nostif.js', // new short name of no-setTimeout-if
     'ubo-nostif.js',
-    'std.js', // old short scriptlet name
-    'ubo-std.js',
     'ubo-no-setTimeout-if',
-    'ubo-setTimeout-defuser',
     'ubo-nostif',
+    // old scriptlet names which should be supported as well.
+    // should be removed eventually.
+    // do not remove until other filter lists maintainers use them
+    'setTimeout-defuser.js',
+    'ubo-setTimeout-defuser.js',
+    'ubo-setTimeout-defuser',
+    'std.js',
+    'ubo-std.js',
     'ubo-std',
 ];
 
-preventSetTimeout.injections = [toRegExp, startsWith, hit, noopFunc];
+preventSetTimeout.injections = [
+    hit,
+    noopFunc,
+    parseMatchArg,
+    parseDelayArg,
+    toRegExp,
+    startsWith,
+    nativeIsNaN,
+];

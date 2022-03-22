@@ -1,21 +1,15 @@
-/* eslint-disable no-eval, no-underscore-dangle */
-import { clearGlobalProps } from '../helpers';
+/* eslint-disable no-underscore-dangle */
+import { runScriptlet, clearGlobalProps } from '../helpers';
 
-const {
-    test,
-    module,
-} = QUnit;
+const { test, module } = QUnit;
 const name = 'prevent-requestAnimationFrame';
-
-// copy eval to prevent rollup warnings
-const evalWrap = eval;
 
 const nativeRequestAnimationFrame = window.requestAnimationFrame;
 const nativeConsole = console.log; // eslint-disable-line no-console
 
 const beforeEach = () => {
     window.__debug = () => {
-        window.hit = 'value';
+        window.hit = 'FIRED';
     };
 };
 
@@ -46,47 +40,38 @@ test('Checking if alias name works', (assert) => {
 });
 
 test('prevent-requestAnimationFrame: no args -- logging', (assert) => {
-    const params = {
-        name,
-        args: [],
-        verbose: true,
-    };
-    const scriptlet = window.scriptlets.invoke(params);
-    evalWrap(scriptlet);
+    runScriptlet(name);
+
     const done = assert.async();
 
     const logProperty = 'logRequestAnimationFrame';
 
-    function change() {
+    function testFunction() {
         window[logProperty] = 'changed';
     }
-    window.requestAnimationFrame(change);
+    window.requestAnimationFrame(testFunction);
 
     // eslint-disable-next-line no-console
     console.log = function log(input) {
         if (input.indexOf('trace') > -1) {
             return;
         }
-        assert.strictEqual(input, `requestAnimationFrame("${change.toString()}")`, 'console.hit input');
+        assert.strictEqual(input, `requestAnimationFrame("${testFunction.toString()}")`, 'console.hit input');
     };
 
     // do test checking after scriptlet's execution end
     setTimeout(() => {
-        assert.equal(window.hit, 'value', 'Hit function was executed');
+        assert.strictEqual(window.hit, 'FIRED', 'hit fired');
         assert.strictEqual(window[logProperty], 'changed', 'property changed');
         clearGlobalProps(logProperty);
         done();
-    }, 20);
+    }, 100);
 });
 
 test('prevent-requestAnimationFrame: by callback name', (assert) => {
-    const params = {
-        name,
-        args: ['change'],
-        verbose: true,
-    };
-    const scriptlet = window.scriptlets.invoke(params);
-    evalWrap(scriptlet);
+    const scriptletArgs = ['change'];
+    runScriptlet(name, scriptletArgs);
+
     const done = assert.async();
 
     window.one = 'value';
@@ -99,20 +84,16 @@ test('prevent-requestAnimationFrame: by callback name', (assert) => {
     // do test checking after scriptlet's execution end
     setTimeout(() => {
         assert.equal(window.one, 'value', 'Target property not changed');
-        assert.equal(window.hit, 'value', 'Hit function was executed');
+        assert.strictEqual(window.hit, 'FIRED', 'hit fired');
         clearGlobalProps('one');
         done();
-    }, 10);
+    }, 100);
 });
 
 test('prevent-requestAnimationFrame: by regex match', (assert) => {
-    const params = {
-        name,
-        args: ['/a{2,4}/'],
-        verbose: true,
-    };
-    const scriptlet = window.scriptlets.invoke(params);
-    evalWrap(scriptlet);
+    const scriptletArgs = ['/a{2,4}/'];
+    runScriptlet(name, scriptletArgs);
+
     const done = assert.async();
 
     window.aaa = 'one';
@@ -125,20 +106,16 @@ test('prevent-requestAnimationFrame: by regex match', (assert) => {
     // do test checking after scriptlet's execution end
     setTimeout(() => {
         assert.equal(window.aaa, 'one', 'Target property not changed');
-        assert.equal(window.hit, 'value', 'Hit function was executed');
+        assert.strictEqual(window.hit, 'FIRED', 'hit fired');
         clearGlobalProps('aaa');
         done();
-    }, 10);
+    }, 100);
 });
 
 test('prevent-requestAnimationFrame: !match', (assert) => {
-    const params = {
-        name,
-        args: ['!one'],
-        verbose: true,
-    };
-    const scriptlet = window.scriptlets.invoke(params);
-    evalWrap(scriptlet);
+    const scriptletArgs = ['!one'];
+    runScriptlet(name, scriptletArgs);
+
     const done = assert.async();
 
     window.one = 'one';
@@ -158,8 +135,31 @@ test('prevent-requestAnimationFrame: !match', (assert) => {
     setTimeout(() => {
         assert.equal(window.one, 'NEW ONE', 'not \'one\' property should be changed');
         assert.equal(window.two, 'two', 'Target property not changed');
-        assert.equal(window.hit, 'value', 'Hit function was executed');
+        assert.strictEqual(window.hit, 'FIRED', 'hit fired');
         clearGlobalProps('one', 'two');
         done();
-    }, 50);
+    }, 200);
+});
+
+test('prevent-requestAnimationFrame: does not work - invalid regexp pattern', (assert) => {
+    const scriptletArgs = ['/*/'];
+    runScriptlet(name, scriptletArgs);
+
+    const done = assert.async();
+
+    const property = 'prop';
+    window[property] = 'value';
+
+    function testMethod() {
+        window[property] = 'changed';
+    }
+    window.requestAnimationFrame(testMethod);
+
+    // do test checking after scriptlet's execution end
+    setTimeout(() => {
+        assert.equal(window[property], 'changed', 'property should be changed');
+        assert.strictEqual(window.hit, undefined, 'hit should not fire');
+        clearGlobalProps(property);
+        done();
+    }, 200);
 });

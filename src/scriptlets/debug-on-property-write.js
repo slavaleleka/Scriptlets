@@ -4,8 +4,6 @@ import {
     getPropertyInChain,
     createOnErrorHandler,
     hit,
-    toRegExp,
-    matchStackTrace,
 } from '../helpers';
 
 /* eslint-disable max-len */
@@ -24,10 +22,8 @@ import {
  * ```
  */
 /* eslint-enable max-len */
-export function debugOnPropertyWrite(source, property, stack) {
-    const stackRegexp = stack ? toRegExp(stack) : toRegExp('/.?/');
-    if (!property
-        || !matchStackTrace(stackRegexp, new Error().stack)) {
+export function debugOnPropertyWrite(source, property) {
+    if (!property) {
         return;
     }
     const rid = randomId();
@@ -71,6 +67,4 @@ debugOnPropertyWrite.injections = [
     getPropertyInChain,
     createOnErrorHandler,
     hit,
-    toRegExp,
-    matchStackTrace,
 ];

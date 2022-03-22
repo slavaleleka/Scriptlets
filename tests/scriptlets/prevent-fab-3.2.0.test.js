@@ -1,10 +1,8 @@
-/* eslint-disable no-eval, no-multi-assign, func-names, no-underscore-dangle */
-import { clearGlobalProps } from '../helpers';
+/* eslint-disable no-multi-assign, func-names, no-underscore-dangle */
+import { runScriptlet, clearGlobalProps } from '../helpers';
 
 const { test, module } = QUnit;
 const name = 'prevent-fab-3.2.0';
-
-const evalWrapper = eval;
 
 const beforeEach = () => {
     window.__debug = () => {
@@ -17,15 +15,6 @@ const afterEach = () => {
 };
 
 module(name, { beforeEach, afterEach });
-
-const runScriptlet = (name) => {
-    const params = {
-        name,
-        verbose: true,
-    };
-    const resultString = window.scriptlets.invoke(params);
-    evalWrapper(resultString);
-};
 
 const createFuckAdBlockSample = () => {
     function FuckAdBlock() {}
@@ -66,6 +55,7 @@ test('ag works', (assert) => {
         window[agFuckAdBlock] = agFuckAdBlock;
     });
     assert.strictEqual(window[agFuckAdBlock], agFuckAdBlock, 'callback should apply');
+    assert.notOk(window.fuckAdBlock.options);
 
     clearGlobalProps(agFuckAdBlock);
     runScriptlet(name);
@@ -75,6 +65,7 @@ test('ag works', (assert) => {
         window[agFuckAdBlock] = agFuckAdBlock;
     });
     assert.strictEqual(window[agFuckAdBlock], undefined, 'callback should not be applied');
+    assert.ok(window.fuckAdBlock.options);
 
     assert.strictEqual(window.hit, 'FIRED');
     clearGlobalProps(agFuckAdBlock);
