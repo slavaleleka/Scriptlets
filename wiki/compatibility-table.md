@@ -19,7 +19,7 @@
 | [log-addEventListener](../wiki/about-scriptlets.md#log-addEventListener) | addEventListener-logger.js (aell.js) |  |
 | [log-eval](../wiki/about-scriptlets.md#log-eval) |  |  |
 | [log-on-stack-trace](../wiki/about-scriptlets.md#log-on-stack-trace) |  |  |
-| [no-floc](../wiki/about-scriptlets.md#no-floc) | no-floc.js |  |
+| [naver-wcslog](../wiki/about-scriptlets.md#naver-wcslog) |  |  |
 | [noeval](../wiki/about-scriptlets.md#noeval) |  |  |
 | [nowebrtc](../wiki/about-scriptlets.md#nowebrtc) | nowebrtc.js |  |
 | [prevent-addEventListener](../wiki/about-scriptlets.md#prevent-addEventListener) | addEventListener-defuser.js (aeld.js) |  |
@@ -70,6 +70,7 @@
 |  |  | abort-on-iframe-property-write |
 |  | abort-current-script.js (acs.js, abort-current-inline-script.js, acis.js) |  |
 |  | refresh-defuser.js |  |
+|  | no-floc.js |  |
 
 
 # <a id="redirects"></a> Redirects compatibility table
@@ -83,7 +84,8 @@
 | [amazon-apstag](../wiki/about-redirects.md#amazon-apstag) | amazon_apstag.js |  |
 | [ati-smarttag](../wiki/about-redirects.md#ati-smarttag) |  |  |
 | [click2load.html](../wiki/about-redirects.md#click2load.html) | click2load.html |  |
-| [fingerprintjs](../wiki/about-redirects.md#fingerprintjs) | fingerprint2.js |  |
+| [fingerprintjs2](../wiki/about-redirects.md#fingerprintjs2) | fingerprint2.js |  |
+| [fingerprint3js](../wiki/about-redirects.md#fingerprint3js) | fingerprint3.js |  |
 | [google-analytics](../wiki/about-redirects.md#google-analytics) | google-analytics_analytics.js |  |
 | [google-analytics-ga](../wiki/about-redirects.md#google-analytics-ga) | google-analytics_ga.js |  |
 | [googlesyndication-adsbygoogle](../wiki/about-redirects.md#googlesyndication-adsbygoogle) | googlesyndication_adsbygoogle.js |  |
@@ -102,6 +104,7 @@
 | [noopvmap-1.0](../wiki/about-redirects.md#noopvmap-1.0) | noop-vmap1.0.xml |  |
 | [noopvast-2.0](../wiki/about-redirects.md#noopvast-2.0) |  |  |
 | [noopvast-3.0](../wiki/about-redirects.md#noopvast-3.0) |  |  |
+| [prebid-ads](../wiki/about-redirects.md#prebid-ads) | prebid-ads.js |  |
 | [prevent-bab](../wiki/about-redirects.md#prevent-bab) | nobab.js |  |
 | [prevent-bab2](../wiki/about-redirects.md#prevent-bab2) | nobab2.js |  |
 | [prevent-fab-3.2.0](../wiki/about-redirects.md#prevent-fab-3.2.0) | nofab.js |  |
