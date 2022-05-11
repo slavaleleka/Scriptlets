@@ -64,7 +64,6 @@ You can also indicate any other information that you think the developers should
 
 
 
-
 ### Terms
 
   - [ ] By submitting this issue, I agree that pull request does not contain private info and all conditions are met.
