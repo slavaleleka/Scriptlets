@@ -1,5 +1,3 @@
-<!--- --- --- --- --- --- --->
-
 <!--- Please include a summary of the change and which issue is fixed. --->
 
 <!--- If the related issue does not exist in our repository, please create it before making pool request. --->
@@ -10,7 +8,6 @@
 
 <!--- Please note, that we verify every pull request manually, so it may take time to apply it. --->
 
-<!--- --- --- --- --- --- --->
 
 
 ### Prerequisites
