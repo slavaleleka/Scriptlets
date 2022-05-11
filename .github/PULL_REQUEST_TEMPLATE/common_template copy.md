@@ -1,17 +1,14 @@
-<!--- Please include a summary of the change and which issue is fixed. --->
+### Please include a summary of the change and which issue is fixed.
+### If the related issue does not exist in our repository, please create it before making pool request.
+### It is highly recommended to use our [Web Reporting Tool](https://kb.adguard.com/en/technical-support/reporting-tool) instead of creating an issue on GitHub directly.
+### Please note, that we verify every pull request manually, so it may take time to apply it.
 
-<!--- If the related issue does not exist in our repository, please create it before making pool request. --->
-
-<!--- It is highly recommended to use our Web Reporting Tool: --->
-<!--- https://kb.adguard.com/en/technical-support/reporting-tool --->
-<!--- instead of creating an issue on GitHub directly. --->
-
-<!--- Please note, that we verify every pull request manually, so it may take time to apply it. --->
-
+---
 
 
 ### Prerequisites
 ##### To avoid invalid pull requests, please check and confirm following checkboxes:
+
 
   - [ ] This is not an ad/bug report;
   - [ ] My code follows the [guidelines](https://github.com/AdguardTeam/AdguardFilters/blob/master/CONTRIBUTING.md) and [syntax](https://kb.adguard.com/general/how-to-create-your-own-ad-filters) of this project;
@@ -64,6 +61,7 @@ You can also indicate any other information that you think the developers should
 <!-- paste screenshot here -->
 
 </details>
+
 
 
 
