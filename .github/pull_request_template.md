@@ -16,7 +16,6 @@
 ### Prerequisites
 ##### To avoid invalid pull requests, please check and confirm following checkboxes:
 
-
   - [ ] This is not an ad/bug report;
   - [ ] My code follows the [guidelines](https://github.com/AdguardTeam/AdguardFilters/blob/master/CONTRIBUTING.md) and [syntax](https://kb.adguard.com/general/how-to-create-your-own-ad-filters) of this project;
   - [ ] I have performed a self-review of my own changes;
