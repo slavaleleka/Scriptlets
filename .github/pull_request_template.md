@@ -1,5 +1,3 @@
-<!--- --- --- --- --- --- --->
-
 <!--- Please include a summary of the change and which issue is fixed. --->
 
 <!--- If the related issue does not exist in our repository, please create it before making pool request. --->
@@ -10,12 +8,10 @@
 
 <!--- Please note, that we verify every pull request manually, so it may take time to apply it. --->
 
-<!--- --- --- --- --- --- --->
 
 
 ### Prerequisites
 ##### To avoid invalid pull requests, please check and confirm following checkboxes:
-
 
   - [ ] This is not an ad/bug report;
   - [ ] My code follows the [guidelines](https://github.com/AdguardTeam/AdguardFilters/blob/master/CONTRIBUTING.md) and [syntax](https://kb.adguard.com/general/how-to-create-your-own-ad-filters) of this project;
