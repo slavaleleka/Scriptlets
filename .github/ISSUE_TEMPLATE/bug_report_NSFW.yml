@@ -2,7 +2,7 @@
 
 name: 🧪 Bug report — for MV3
 description: If you found something wrong in the MV3 extension.
-labels: [Bug, MV3]
+labels: [bug, MV3]
 body:
   - type: markdown
     attributes:
