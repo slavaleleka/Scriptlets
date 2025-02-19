@@ -396,3 +396,23 @@ const redirect = redirect.getRedirect('noopjs');
 | Chrome | Edge | Firefox | IE | Opera | Safari |
 |--|--|--|--|--|--|
 | 55 | 15 | 52 | 11 | 42 | 10 |
+
+## Test
+
+List:
+
+* a
+
+    * a1
+
+    * a2
+
+    > [!WARNING]
+    > Test warning a2.
+
+* b
+
+> [!WARNING]
+> Test warning b.
+
+End text.
