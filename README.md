@@ -361,7 +361,8 @@ Schema
 ```
 
 #### Redirects library
-```
+
+```text
 dist/redirects.js
 dist/redirects.yml
 ```
@@ -393,6 +394,7 @@ const redirect = redirect.getRedirect('noopjs');
 ```
 
 ## <a id="browser-compatibility"> Browser Compatibility
+
 | Chrome | Edge | Firefox | IE | Opera | Safari |
 |--|--|--|--|--|--|
 | 55 | 15 | 52 | 11 | 42 | 10 |
