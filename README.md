@@ -407,8 +407,8 @@ List:
 
     * a2
 
-    > [!WARNING]
-    > Test warning a2.
+> [!WARNING]
+> Test warning a2.
 
 * b
 
