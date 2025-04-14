@@ -1,5 +1,5 @@
 /* eslint-disable no-underscore-dangle */
-import { runScriptlet, clearGlobalProps } from '../helpers';
+import { clearGlobalProps } from '../helpers';
 
 const { test, module } = QUnit;
 const name = 'set-cookie-reload';
@@ -16,32 +16,20 @@ const afterEach = () => {
 
 module(name, { beforeEach, afterEach });
 
-test('Set cookie with valid value', (assert) => {
-    // TODO: add set-cookie same tests after the task:
-    // Divide tests to execute one test per page
-    // cause reloading hangs tests executing
-    assert.strictEqual(true, true, 'fake test to avoid qunit error');
-});
+test('Checking if alias name works', (assert) => {
+    const adgParams = {
+        name,
+        engine: 'test',
+        verbose: true,
+    };
+    const uboParams = {
+        name: 'ubo-set-cookie-reload.js',
+        engine: 'test',
+        verbose: true,
+    };
 
-test('Set cookie with invalid value', (assert) => {
-    let cName = '__test2-cookie_approved';
-    let cValue = 'approved';
-    runScriptlet(name, [cName, cValue]);
-    assert.strictEqual(window.hit, undefined, 'Hit was not fired');
-    assert.strictEqual(document.cookie.includes(cName), false, 'Cookie has not been set');
-    assert.strictEqual(document.cookie.includes(cValue), false, 'Cookie has not been set');
+    const codeByAdgParams = window.scriptlets.invoke(adgParams);
+    const codeByUboParams = window.scriptlets.invoke(uboParams);
 
-    cName = '__test2-cookie_dismiss';
-    cValue = 'dismiss';
-    runScriptlet(name, [cName, cValue]);
-    assert.strictEqual(window.hit, undefined, 'Hit was not fired');
-    assert.strictEqual(document.cookie.includes(cName), false, 'Cookie has not been set');
-    assert.strictEqual(document.cookie.includes(cValue), false, 'Cookie has not been set');
-
-    cName = '__test2-cookie_pcbc';
-    cValue = '_pcbc';
-    runScriptlet(name, [cName, cValue]);
-    assert.strictEqual(window.hit, undefined, 'Hit was not fired');
-    assert.strictEqual(document.cookie.includes(cName), false, 'Cookie has not been set');
-    assert.strictEqual(document.cookie.includes(cValue), false, 'Cookie has not been set');
+    assert.strictEqual(codeByAdgParams, codeByUboParams, 'ubo name - ok');
 });

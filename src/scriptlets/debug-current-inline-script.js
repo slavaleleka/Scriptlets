@@ -5,6 +5,8 @@ import {
     toRegExp,
     createOnErrorHandler,
     hit,
+    logMessage,
+    isEmptyObject,
 } from '../helpers';
 
 /* eslint-disable max-len */
@@ -12,15 +14,19 @@ import {
  * @scriptlet debug-current-inline-script
  *
  * @description
- * This scriptlet is basically the same as [abort-current-inline-script](#abort-current-inline-script), but instead of aborting it starts the debugger.
+ * This scriptlet is basically the same as [abort-current-inline-script](#abort-current-inline-script),
+ * but instead of aborting it starts the debugger.
  *
- * **It is not supposed to be used in production filter lists!**
+ * > It is not allowed for prod versions of filter lists.
  *
- * **Syntax**
- *```
+ * ### Examples
+ *
+ * ```adblock
  * ! Aborts script when it tries to access `window.alert`
  * example.org#%#//scriptlet('debug-current-inline-script', 'alert')
  * ```
+ *
+ * @added v1.0.4.
  */
 /* eslint-enable max-len */
 export function debugCurrentInlineScript(source, property, search) {
@@ -29,7 +35,7 @@ export function debugCurrentInlineScript(source, property, search) {
 
     const getCurrentScript = () => {
         if ('currentScript' in document) {
-            return document.currentScript; // eslint-disable-line compat/compat
+            return document.currentScript;
         }
         const scripts = document.getElementsByTagName('script');
         return scripts[scripts.length - 1];
@@ -76,7 +82,9 @@ export function debugCurrentInlineScript(source, property, search) {
             const props = property.split('.');
             const propIndex = props.indexOf(prop);
             const baseName = props[propIndex - 1];
-            console.log(`The scriptlet had been executed before the ${baseName} was loaded.`); // eslint-disable-line no-console, max-len
+
+            const message = `The scriptlet had been executed before the ${baseName} was loaded.`;
+            logMessage(message, source.verbose);
             return;
         }
 
@@ -109,13 +117,15 @@ export function debugCurrentInlineScript(source, property, search) {
 
     setChainPropAccess(window, property);
 
-    window.onerror = createOnErrorHandler(rid)
-        .bind();
+    window.onerror = createOnErrorHandler(rid).bind();
 }
 
-debugCurrentInlineScript.names = [
+export const debugCurrentInlineScriptNames = [
     'debug-current-inline-script',
 ];
+
+// eslint-disable-next-line prefer-destructuring
+debugCurrentInlineScript.primaryName = debugCurrentInlineScriptNames[0];
 
 debugCurrentInlineScript.injections = [
     randomId,
@@ -124,4 +134,6 @@ debugCurrentInlineScript.injections = [
     toRegExp,
     createOnErrorHandler,
     hit,
+    logMessage,
+    isEmptyObject,
 ];

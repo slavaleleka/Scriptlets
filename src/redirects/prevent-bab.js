@@ -1,4 +1,4 @@
-import { preventBab } from '../scriptlets/prevent-bab';
+import { preventBab as preventBabScriptlet } from '../scriptlets/prevent-bab';
 
 /**
  * @redirect prevent-bab
@@ -10,11 +10,27 @@ import { preventBab } from '../scriptlets/prevent-bab';
  * See [scriptlet description](../wiki/about-scriptlets.md#prevent-bab).
  *
  * Related UBO redirect resource:
- * https://github.com/gorhill/uBlock/blob/a94df7f3b27080ae2dcb3b914ace39c0c294d2f6/src/web_accessible_resources/nobab.js
+ * https://github.com/gorhill/uBlock/blob/master/src/web_accessible_resources/nobab.js
  *
- * **Example**
- * ```
+ * ### Examples
+ *
+ * ```adblock
  * /blockadblock.$script,redirect=prevent-bab
  * ```
+ *
+ * @added v1.3.19.
  */
+const preventBab = preventBabScriptlet;
+
+export const preventBabNames = [
+    'prevent-bab',
+    // list of prevent-bab redirect aliases
+    'nobab.js',
+    'ubo-nobab.js',
+    'bab-defuser.js',
+    'ubo-bab-defuser.js',
+    'ubo-nobab',
+    'ubo-bab-defuser',
+];
+
 export { preventBab };

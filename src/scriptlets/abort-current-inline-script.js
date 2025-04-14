@@ -3,9 +3,11 @@ import {
     setPropertyAccess,
     getPropertyInChain,
     toRegExp,
-    startsWith,
     createOnErrorHandler,
     hit,
+    logMessage,
+    isEmptyObject,
+    getDescriptorAddon,
 } from '../helpers';
 
 /* eslint-disable max-len */
@@ -21,55 +23,65 @@ import {
  * https://github.com/gorhill/uBlock/wiki/Resources-Library#abort-current-inline-scriptjs-
  *
  * Related ABP source:
- * https://github.com/adblockplus/adblockpluscore/blob/6b2a309054cc23432102b85d13f12559639ef495/lib/content/snippets.js#L928
+ * https://gitlab.com/eyeo/snippets/-/blob/main/source/behavioral/abort-current-inline-script.js
  *
- * **Syntax**
- * ```
+ * ### Syntax
+ *
+ * ```text
  * example.org#%#//scriptlet('abort-current-inline-script', property[, search])
  * ```
  *
- * - `property` - required, path to a property (joined with `.` if needed). The property must be attached to `window`
- * - `search` - optional, string or regular expression that must match the inline script content.
- * Defaults to abort all scripts which are trying to access the specified property.
- * Invalid regular expression will cause exit and rule will not work.
+ * - `property` — required, path to a property (joined with `.` if needed). The property must be attached to `window`
+ * - `search` — optional, string or regular expression that must match the inline script content.
+ *   Defaults to abort all scripts which are trying to access the specified property.
+ *   Invalid regular expression will cause exit and rule will not work.
  *
- * > Note please that for inline script with addEventListener in it
- * `property` should be set as `EventTarget.prototype.addEventListener`,
- * not just `addEventListener`.
+ * > Note please that to abort the inline script with addEventListener in it,
+ * > `property` should be set as `EventTarget.prototype.addEventListener`, not just `addEventListener`.
  *
- * **Examples**
+ * ### Examples
+ *
  * 1. Aborts all inline scripts trying to access `window.alert`
- *     ```
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('abort-current-inline-script', 'alert')
  *     ```
  *
- * 2. Aborts inline scripts which are trying to access `window.alert` and contain `Hello, world`.
- *     ```
+ * 1. Aborts inline scripts which are trying to access `window.alert` and contain `Hello, world`
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('abort-current-inline-script', 'alert', 'Hello, world')
  *     ```
  *
- *     For instance, the following script will be aborted
+ *     For instance, the following script will be aborted:
+ *
  *     ```html
  *     <script>alert("Hello, world");</script>
  *     ```
  *
- * 3. Aborts inline scripts which are trying to access `window.alert` and match this regexp: `/Hello.+world/`.
- *     ```
+ * 1. Aborts inline scripts which are trying to access `window.alert` and match regexp `/Hello.+world/`
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('abort-current-inline-script', 'alert', '/Hello.+world/')
  *     ```
  *
  *     For instance, the following scripts will be aborted:
+ *
  *     ```html
  *     <script>alert("Hello, big world");</script>
  *     ```
+ *
  *     ```html
  *     <script>alert("Hello, little world");</script>
  *     ```
  *
- *     This script will not be aborted:
+ *     And this script will not be aborted:
+ *
  *     ```html
  *     <script>alert("Hi, little world");</script>
  *     ```
+ *
+ * @added v1.0.4.
  */
 /* eslint-enable max-len */
 export function abortCurrentInlineScript(source, property, search) {
@@ -80,7 +92,7 @@ export function abortCurrentInlineScript(source, property, search) {
 
     const getCurrentScript = () => {
         if ('currentScript' in document) {
-            return document.currentScript; // eslint-disable-line compat/compat
+            return document.currentScript;
         }
         const scripts = document.getElementsByTagName('script');
         return scripts[scripts.length - 1];
@@ -107,7 +119,7 @@ export function abortCurrentInlineScript(source, property, search) {
         // https://github.com/AdguardTeam/Scriptlets/issues/130
         if (content.length === 0
             && typeof scriptEl.src !== 'undefined'
-            && startsWith(scriptEl.src, SRC_DATA_MARKER)) {
+            && scriptEl.src?.startsWith(SRC_DATA_MARKER)) {
             const encodedContent = scriptEl.src.slice(SRC_DATA_MARKER.length);
             content = window.atob(encodedContent);
         }
@@ -135,7 +147,9 @@ export function abortCurrentInlineScript(source, property, search) {
             const props = property.split('.');
             const propIndex = props.indexOf(prop);
             const baseName = props[propIndex - 1];
-            console.log(`The scriptlet had been executed before the ${baseName} was loaded.`); // eslint-disable-line no-console, max-len
+
+            const message = `The scriptlet had been executed before the ${baseName} was loaded.`;
+            logMessage(source, message);
             return;
         }
 
@@ -160,32 +174,47 @@ export function abortCurrentInlineScript(source, property, search) {
             currentValue = base[prop];
             origDescriptor = undefined;
         }
-        setPropertyAccess(base, prop, {
-            set: (value) => {
-                abort();
-                if (origDescriptor instanceof Object) {
-                    origDescriptor.set.call(base, value);
-                } else {
-                    currentValue = value;
+
+        const descriptorWrapper = Object.assign(getDescriptorAddon(), {
+            currentValue,
+            get() {
+                if (!this.isAbortingSuspended) {
+                    this.isolateCallback(abort);
                 }
-            },
-            get: () => {
-                abort();
                 if (origDescriptor instanceof Object) {
                     return origDescriptor.get.call(base);
                 }
-                return currentValue;
+                return this.currentValue;
+            },
+            set(newValue) {
+                if (!this.isAbortingSuspended) {
+                    this.isolateCallback(abort);
+                }
+                if (origDescriptor instanceof Object) {
+                    origDescriptor.set.call(base, newValue);
+                } else {
+                    this.currentValue = newValue;
+                }
+            },
+        });
+
+        setPropertyAccess(base, prop, {
+            // Call wrapped getter and setter to keep isAbortingSuspended & isolateCallback values
+            get() {
+                return descriptorWrapper.get.call(descriptorWrapper);
+            },
+            set(newValue) {
+                descriptorWrapper.set.call(descriptorWrapper, newValue);
             },
         });
     };
 
     setChainPropAccess(window, property);
 
-    window.onerror = createOnErrorHandler(rid)
-        .bind();
+    window.onerror = createOnErrorHandler(rid).bind();
 }
 
-abortCurrentInlineScript.names = [
+export const abortCurrentInlineScriptNames = [
     'abort-current-inline-script',
     // aliases are needed for matching the related scriptlet converted into our syntax
     'abort-current-script.js',
@@ -205,12 +234,17 @@ abortCurrentInlineScript.names = [
     'abp-abort-current-inline-script',
 ];
 
+// eslint-disable-next-line prefer-destructuring
+abortCurrentInlineScript.primaryName = abortCurrentInlineScriptNames[0];
+
 abortCurrentInlineScript.injections = [
     randomId,
     setPropertyAccess,
     getPropertyInChain,
     toRegExp,
-    startsWith,
     createOnErrorHandler,
     hit,
+    logMessage,
+    isEmptyObject,
+    getDescriptorAddon,
 ];

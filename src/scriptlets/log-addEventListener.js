@@ -4,10 +4,10 @@ import {
     validateListener,
     listenerToString,
     convertTypeToString,
-    // following helpers are needed for helpers above
+    logMessage,
     objectToString,
     isEmptyObject,
-    getObjectEntries,
+    getElementAttributesWithValues,
 } from '../helpers';
 
 /**
@@ -19,36 +19,76 @@ import {
  * Related UBO scriptlet:
  * https://github.com/gorhill/uBlock/wiki/Resources-Library#addeventlistener-loggerjs-
  *
- * **Syntax**
- * ```
+ * ### Syntax
+ *
+ * ```adblock
  * example.org#%#//scriptlet('log-addEventListener')
  * ```
+ *
+ * @added v1.0.4.
  */
 export function logAddEventListener(source) {
-    // eslint-disable-next-line no-console
-    const log = console.log.bind(console);
     const nativeAddEventListener = window.EventTarget.prototype.addEventListener;
 
     function addEventListenerWrapper(type, listener, ...args) {
         if (validateType(type) && validateListener(listener)) {
-            const logMessage = `addEventListener("${type}", ${listenerToString(listener)})`;
-            log(logMessage);
+            let targetElement;
+            let targetElementInfo;
+            const listenerInfo = listenerToString(listener);
+
+            if (this) {
+                if (this instanceof Window) {
+                    targetElementInfo = 'window';
+                } else if (this instanceof Document) {
+                    targetElementInfo = 'document';
+                } else if (this instanceof Element) {
+                    targetElement = this;
+                    targetElementInfo = getElementAttributesWithValues(this);
+                }
+            }
+
+            if (targetElementInfo) {
+                const message = `addEventListener("${type}", ${listenerInfo})\nElement: ${targetElementInfo}`;
+                logMessage(source, message, true);
+                if (targetElement) {
+                    // eslint-disable-next-line no-console
+                    console.log('log-addEventListener Element:', targetElement);
+                }
+            } else {
+                const message = `addEventListener("${type}", ${listenerInfo})`;
+                logMessage(source, message, true);
+            }
             hit(source);
-        } else if (source.verbose) {
+        } else {
             // logging while debugging
-            const logMessage = `Invalid event type or listener passed to addEventListener:
-type: ${convertTypeToString(type)}
-listener: ${convertTypeToString(listener)}`;
-            log(logMessage);
+            const message = `Invalid event type or listener passed to addEventListener:
+        type: ${convertTypeToString(type)}
+        listener: ${convertTypeToString(listener)}`;
+            logMessage(source, message, true);
         }
 
-        return nativeAddEventListener.apply(this, [type, listener, ...args]);
+        // Avoid illegal invocations due to lost context
+        // https://github.com/AdguardTeam/Scriptlets/issues/271
+        let context = this;
+        if (this && this.constructor?.name === 'Window' && this !== window) {
+            context = window;
+        }
+        return nativeAddEventListener.apply(context, [type, listener, ...args]);
     }
 
-    window.EventTarget.prototype.addEventListener = addEventListenerWrapper;
+    const descriptor = {
+        configurable: true,
+        set: () => {},
+        get: () => addEventListenerWrapper,
+    };
+    // https://github.com/AdguardTeam/Scriptlets/issues/215
+    // https://github.com/AdguardTeam/Scriptlets/issues/143
+    Object.defineProperty(window.EventTarget.prototype, 'addEventListener', descriptor);
+    Object.defineProperty(window, 'addEventListener', descriptor);
+    Object.defineProperty(document, 'addEventListener', descriptor);
 }
 
-logAddEventListener.names = [
+export const logAddEventListenerNames = [
     'log-addEventListener',
     // aliases are needed for matching the related scriptlet converted into our syntax
     'addEventListener-logger.js',
@@ -59,13 +99,17 @@ logAddEventListener.names = [
     'ubo-aell',
 ];
 
+// eslint-disable-next-line prefer-destructuring
+logAddEventListener.primaryName = logAddEventListenerNames[0];
+
 logAddEventListener.injections = [
     hit,
     validateType,
     validateListener,
     listenerToString,
     convertTypeToString,
+    logMessage,
     objectToString,
     isEmptyObject,
-    getObjectEntries,
+    getElementAttributesWithValues,
 ];

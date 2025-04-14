@@ -18,7 +18,7 @@ const beforeEach = () => {
 const afterEach = () => {
     window.setTimeout = nativeSetTimeout;
     testTimeouts.forEach((t) => (clearTimeout(t)));
-    clearGlobalProps('hit', '__debug', 'one', 'two', 'three', 'four');
+    clearGlobalProps('hit', '__debug', 'one', 'two', 'three', 'four', 'five');
     console.log = nativeConsole; // eslint-disable-line no-console
 };
 
@@ -43,29 +43,35 @@ test('Checking if alias name works', (assert) => {
 });
 
 test('no args -- logging', (assert) => {
-    runScriptlet(name);
-    const done = assert.async();
-
     const agLogSetTimeout = 'agLogSetTimeout';
     function callback() {
         window[agLogSetTimeout] = 'changed';
     }
     const timeout = 10;
 
-    const timeoutId = setTimeout(callback, timeout);
-    testTimeouts.push(timeoutId);
-
+    let loggedMessage;
     // eslint-disable-next-line no-console
     console.log = function log(input) {
-        if (input.indexOf('trace') > -1) {
+        if (input.includes('trace')) {
             return;
         }
-        assert.strictEqual(input, `setTimeout("${callback.toString()}", ${timeout})`, 'console.hit input');
+        loggedMessage = input;
     };
+
+    runScriptlet(name);
+    const done = assert.async();
+
+    const timeoutId = setTimeout(callback, timeout);
+    testTimeouts.push(timeoutId);
 
     // We need to run our assertion after all timeouts
     nativeSetTimeout(() => {
         assert.strictEqual(window.hit, 'FIRED', 'hit fired');
+        assert.strictEqual(
+            loggedMessage,
+            `prevent-setTimeout: setTimeout(${callback.toString()}, ${timeout})`,
+            'console.hit input ok',
+        );
         assert.strictEqual(window[agLogSetTimeout], 'changed', 'property changed');
         clearGlobalProps(agLogSetTimeout);
         done();
@@ -79,7 +85,6 @@ test('setTimeout callback name matching', (assert) => {
     // We need to run our assertion after all timeouts
     nativeSetTimeout(() => {
         assert.equal(window.one, 'value', 'Target property not changed');
-        // eslint-disable-next-line max-len
         assert.equal(window.two, 'new value', 'Another property should successfully changed by another timeout');
         assert.strictEqual(window.hit, 'FIRED', 'hit fired');
         done();
@@ -107,7 +112,6 @@ test('code matching', (assert) => {
     // We need to run our assertion after all timeouts
     nativeSetTimeout(() => {
         assert.equal(window.one, 'value', 'Target property not changed');
-        // eslint-disable-next-line max-len
         assert.equal(window.two, 'new value', 'Another property should  be successfully changed by another timeout');
         assert.strictEqual(window.hit, 'FIRED', 'hit fired');
         done();
@@ -136,12 +140,11 @@ test('!match', (assert) => {
     // We need to run our assertion after all timeouts
     nativeSetTimeout(() => {
         assert.equal(window.one, 'NEW ONE', '!match-property not changed');
-        // eslint-disable-next-line max-len
         assert.equal(window.two, 'two', 'Second property should be successfully changed');
         assert.equal(window.three, 'three', 'Third property should be successfully changed');
         assert.strictEqual(window.hit, 'FIRED', 'hit fired');
         done();
-    }, 100);
+    }, 200);
 
     // run scriptlet code
     const scriptletArgs = ['!first'];
@@ -158,6 +161,38 @@ test('!match', (assert) => {
 
     const third = () => { window.three = 'NEW THREE'; };
     const timeoutTest3 = setTimeout(third, 50);
+    testTimeouts.push(timeoutTest3);
+});
+
+test('match any callback + delay = 0', (assert) => {
+    const done = assert.async();
+    window.one = 'one';
+    window.two = 'two';
+    window.three = 'three';
+    // We need to run our assertion after all timeouts
+    nativeSetTimeout(() => {
+        assert.equal(window.one, 'NEW ONE', 'property \'one\' is changed due to none-zero delay');
+        assert.equal(window.two, 'two', 'property \'two\' should NOT be changed');
+        assert.equal(window.three, 'three', 'property \'three\' should NOT be changed');
+        assert.strictEqual(window.hit, 'FIRED', 'hit fired');
+        done();
+    }, 100);
+
+    // run scriptlet code
+    const scriptletArgs = ['', '0'];
+    runScriptlet(name, scriptletArgs);
+
+    // only this one SHOULD NOT be prevented because of delay mismatch
+    const first = () => { window.one = 'NEW ONE'; };
+    const timeoutTest1 = setTimeout(first, 30);
+    testTimeouts.push(timeoutTest1);
+
+    const second = () => { window.two = 'NEW TWO'; };
+    const timeoutTest2 = setTimeout(second, 0);
+    testTimeouts.push(timeoutTest2);
+
+    const third = () => { window.three = 'NEW THREE'; };
+    const timeoutTest3 = setTimeout(third, 0);
     testTimeouts.push(timeoutTest3);
 });
 
@@ -237,7 +272,7 @@ test('prevent-setTimeout: does not work - invalid regexp pattern', (assert) => {
     // We need to run our assertion after all timeouts
     nativeSetTimeout(() => {
         assert.equal(window.one, 'changed', 'property should be changed');
-        assert.strictEqual(window.hit, undefined, 'hit fired');
+        assert.strictEqual(window.hit, undefined, 'hit should NOT fire');
         done();
     }, 100);
 
@@ -246,7 +281,303 @@ test('prevent-setTimeout: does not work - invalid regexp pattern', (assert) => {
     runScriptlet(name, scriptletArgs);
 
     // check if scriptlet works
-    const test = () => { window.one = 'changed'; };
-    const timeoutTest = setTimeout(test, 50);
+    const callback = () => { window.one = 'changed'; };
+    const timeoutTest = setTimeout(callback, 50);
     testTimeouts.push(timeoutTest);
+});
+
+test('prevent-setTimeout: no callback for setTimeout considered as undefined', (assert) => {
+    const done = assert.async();
+    window.one = 1;
+    // We need to run our assertion after all timeouts
+    nativeSetTimeout(() => {
+        assert.equal(window.one, 1, 'property should not be changed');
+        assert.strictEqual(window.hit, undefined, 'hit should NOT fire as callback is invalid');
+        done();
+    }, 100);
+
+    // run scriptlet code — match any callback
+    const scriptletArgs = ['.?'];
+    runScriptlet(name, scriptletArgs);
+
+    // callback is undefined is such case, should not hit
+    const timeoutTest = setTimeout(console.log('this is no callback'), 10); // eslint-disable-line no-console
+    testTimeouts.push(timeoutTest);
+});
+
+test('prevent-setTimeout: null as callback', (assert) => {
+    const done = assert.async();
+    window.one = 1;
+    // We need to run our assertion after all timeouts
+    nativeSetTimeout(() => {
+        assert.equal(window.one, 1, 'property should not be changed');
+        assert.strictEqual(window.hit, undefined, 'hit should NOT fire as callback is null');
+        done();
+    }, 100);
+
+    // run scriptlet code — match any callback
+    const scriptletArgs = ['.?'];
+    runScriptlet(name, scriptletArgs);
+
+    const callback = null;
+    const timeoutTest = setTimeout(callback, 10);
+    testTimeouts.push(timeoutTest);
+});
+
+test('prevent-setTimeout: single round bracket in matchCallback', (assert) => {
+    // Single round bracket
+    const done = assert.async();
+    window.one = 1;
+
+    nativeSetTimeout(() => {
+        assert.equal(window.one, 1, 'property should not be changed');
+        assert.strictEqual(window.hit, 'FIRED', 'hit fired');
+        done();
+    }, 100);
+
+    const scriptletArgs = ['baitFunc('];
+    runScriptlet(name, scriptletArgs);
+
+    const callback = () => {
+        const baitFunc = (value) => {
+            window.one = value;
+        };
+        baitFunc('new value');
+    };
+    const timeoutTest = setTimeout(callback, 10);
+    testTimeouts.push(timeoutTest);
+});
+
+test('prevent-setTimeout: single square bracket in matchCallback', (assert) => {
+    const done = assert.async();
+    window.one = 1;
+
+    nativeSetTimeout(() => {
+        assert.equal(window.one, 1, 'property should not be changed');
+        assert.strictEqual(window.hit, 'FIRED', 'hit fired');
+        done();
+    }, 100);
+
+    const scriptletArgs = ['[1'];
+    runScriptlet(name, scriptletArgs);
+
+    const callback = () => {
+        const baitFunc = () => {
+            const bait = [1];
+            window.one = bait;
+        };
+        baitFunc();
+    };
+    const timeoutTest = setTimeout(callback, 10);
+    testTimeouts.push(timeoutTest);
+});
+
+test('match any callback + decimal delay', (assert) => {
+    const done = assert.async();
+    window.one = 'one';
+    window.two = 'two';
+    window.three = 'three';
+    // We need to run our assertion after all timeouts
+    nativeSetTimeout(() => {
+        assert.equal(window.one, 'NEW ONE', 'property \'one\' is changed due to non-matched delay');
+        assert.equal(window.two, 'two', 'property \'two\' should NOT be changed');
+        assert.equal(window.three, 'three', 'property \'three\' should NOT be changed');
+        assert.strictEqual(window.hit, 'FIRED', 'hit fired');
+        done();
+    }, 100);
+
+    // run scriptlet code
+    const scriptletArgs = ['', '10'];
+    runScriptlet(name, scriptletArgs);
+
+    // only this one SHOULD NOT be prevented because of delay mismatch
+    const first = () => { window.one = 'NEW ONE'; };
+    const timeoutTest1 = setTimeout(first, 30);
+    testTimeouts.push(timeoutTest1);
+
+    const second = () => { window.two = 'NEW TWO'; };
+    const timeoutTest2 = setTimeout(second, 10.05);
+    testTimeouts.push(timeoutTest2);
+
+    const third = () => { window.three = 'NEW THREE'; };
+    const timeoutTest3 = setTimeout(third, 10.95);
+    testTimeouts.push(timeoutTest3);
+});
+
+test('match any callback + non-number, decimal and string delays', (assert) => {
+    const done = assert.async();
+    window.one = 'one';
+    window.two = 'two';
+    window.three = 'three';
+    window.four = 'old four';
+    window.five = 'old five';
+    // We need to run our assertion after all timeouts
+    nativeSetTimeout(() => {
+        assert.equal(window.one, 'one', 'property \'one\' should NOT be changed');
+        assert.equal(window.two, 'NEW TWO', 'property \'two\' should be changed');
+        assert.equal(window.three, 'NEW THREE', 'property \'three\' should be changed');
+
+        assert.equal(window.four, 'old four', 'property \'four\' should NOT be changed');
+        assert.equal(window.five, 'NEW FIVE', 'property \'five\' should be changed');
+
+        assert.strictEqual(window.hit, 'FIRED', 'hit fired');
+        done();
+    }, 100);
+
+    // run scriptlet code
+    const scriptletArgs = ['', '25'];
+    runScriptlet(name, scriptletArgs);
+
+    // only this one SHOULD NOT be prevented because of delay mismatch
+    const first = () => { window.one = 'NEW ONE'; };
+    const timeoutTest1 = setTimeout(first, 25.123);
+    testTimeouts.push(timeoutTest1);
+
+    const second = () => { window.two = 'NEW TWO'; };
+    const timeoutTest2 = setTimeout(second, null);
+    testTimeouts.push(timeoutTest2);
+
+    const third = () => { window.three = 'NEW THREE'; };
+    const timeoutTest3 = setTimeout(third, true);
+    testTimeouts.push(timeoutTest3);
+
+    // test with string delays
+    const fourth = () => { window.four = 'NEW FOUR'; };
+    const timeoutTest4 = setTimeout(fourth, '25.123');
+    testTimeouts.push(timeoutTest4);
+
+    const fifth = () => { window.five = 'NEW FIVE'; };
+    const timeoutTest5 = setTimeout(fifth, '10');
+    testTimeouts.push(timeoutTest5);
+});
+
+test('match any callback, falsy non-numbers delays dont collide with 0 ', (assert) => {
+    const done = assert.async();
+    window.one = 'one';
+    window.two = 'two';
+    window.three = 'three';
+    // We need to run our assertion after all timeouts
+    nativeSetTimeout(() => {
+        assert.equal(window.one, 'one', 'property \'one\' should NOT be changed');
+        assert.equal(window.two, 'NEW TWO', 'property \'two\' should be changed');
+        assert.equal(window.three, 'NEW THREE', 'property \'three\' should be changed');
+
+        assert.strictEqual(window.hit, 'FIRED', 'hit fired');
+        done();
+    }, 100);
+
+    // run scriptlet code
+    const scriptletArgs = ['', '0'];
+    runScriptlet(name, scriptletArgs);
+
+    const first = () => { window.one = 'NEW ONE'; };
+    const timeoutTest1 = setTimeout(first, 0);
+    testTimeouts.push(timeoutTest1);
+
+    const second = () => { window.two = 'NEW TWO'; };
+    const timeoutTest2 = setTimeout(second, null);
+    testTimeouts.push(timeoutTest2);
+
+    const third = () => { window.three = 'NEW THREE'; };
+    const timeoutTest3 = setTimeout(third, undefined);
+    testTimeouts.push(timeoutTest3);
+});
+
+/**
+ * Following group tests for callback matching with escaped single and double quotes
+ * inside match callback argument
+ * https://github.com/AdguardTeam/Scriptlets/issues/286
+ */
+test('match with escaped single quotes', (assert) => {
+    const markerProp = 'callbackFired';
+    window[markerProp] = false;
+    const done = assert.async();
+
+    // We need to run our assertion after all timeouts
+    nativeSetTimeout(() => {
+        assert.notOk(window.callbackFired, 'callback was blocked');
+        assert.strictEqual(window.hit, 'FIRED', 'hit fired');
+        done();
+    }, 100);
+
+    const CALLBACK_MATCH = String.raw`.css(\'display\',\'block\');`;
+
+    // run scriptlet code
+    const scriptletArgs = [CALLBACK_MATCH, '30'];
+    runScriptlet(name, scriptletArgs);
+
+    // eslint-disable-next-line quotes
+    const callback = () => { window[markerProp] = ".css('display','block');"; };
+    const timeoutTest1 = setTimeout(callback, 30);
+    testTimeouts.push(timeoutTest1);
+});
+
+test('match with unescaped single quotes', (assert) => {
+    const markerProp = 'callbackFired';
+    window[markerProp] = false;
+    const done = assert.async();
+
+    // We need to run our assertion after all timeouts
+    nativeSetTimeout(() => {
+        assert.notOk(window.callbackFired, 'callback was blocked');
+        assert.strictEqual(window.hit, 'FIRED', 'hit fired');
+        done();
+    }, 100);
+
+    const CALLBACK_MATCH = String.raw`.css('display','block');`;
+
+    // run scriptlet code
+    const scriptletArgs = [CALLBACK_MATCH, '30'];
+    runScriptlet(name, scriptletArgs);
+
+    // eslint-disable-next-line quotes
+    const callback = () => { window[markerProp] = ".css('display','block');"; };
+    const timeoutTest1 = setTimeout(callback, 30);
+    testTimeouts.push(timeoutTest1);
+});
+
+test('match with escaped double quotes', (assert) => {
+    const markerProp = 'callbackFired';
+    window[markerProp] = false;
+    const done = assert.async();
+
+    // We need to run our assertion after all timeouts
+    nativeSetTimeout(() => {
+        assert.notOk(window.callbackFired, 'callback was blocked');
+        assert.strictEqual(window.hit, 'FIRED', 'hit fired');
+        done();
+    }, 100);
+
+    const CALLBACK_MATCH = String.raw`.css(\"display\",\"block\");`;
+
+    // run scriptlet code
+    const scriptletArgs = [CALLBACK_MATCH, '30'];
+    runScriptlet(name, scriptletArgs);
+
+    const callback = () => { window[markerProp] = '.css("display","block");'; };
+    const timeoutTest1 = setTimeout(callback, 30);
+    testTimeouts.push(timeoutTest1);
+});
+
+test('match with escaped double quotes', (assert) => {
+    const markerProp = 'callbackFired';
+    window[markerProp] = false;
+    const done = assert.async();
+
+    // We need to run our assertion after all timeouts
+    nativeSetTimeout(() => {
+        assert.notOk(window.callbackFired, 'callback was blocked');
+        assert.strictEqual(window.hit, 'FIRED', 'hit fired');
+        done();
+    }, 100);
+
+    const CALLBACK_MATCH = '.css("display","block");';
+
+    // run scriptlet code
+    const scriptletArgs = [CALLBACK_MATCH, '30'];
+    runScriptlet(name, scriptletArgs);
+
+    const callback = () => { window[markerProp] = '.css("display","block");'; };
+    const timeoutTest1 = setTimeout(callback, 30);
+    testTimeouts.push(timeoutTest1);
 });

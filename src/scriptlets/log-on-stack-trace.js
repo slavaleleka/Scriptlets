@@ -2,6 +2,10 @@ import {
     getPropertyInChain,
     setPropertyAccess,
     hit,
+    logMessage,
+    isEmptyObject,
+    backupRegExpValues,
+    restoreRegExpValues,
 } from '../helpers';
 
 /* eslint-disable max-len */
@@ -9,25 +13,32 @@ import {
  * @scriptlet log-on-stack-trace
  *
  * @description
- * This scriptlet is basically the same as [abort-on-stack-trace](#abort-on-stack-trace), but instead of aborting it logs:
+ * This scriptlet is basically the same as [abort-on-stack-trace](#abort-on-stack-trace),
+ * but instead of aborting it logs:
+ *
  * - function and source script names pairs that access the given property
  * - was that get or set attempt
  * - script being injected or inline
  *
- * **Syntax**
- * ```
+ * ### Syntax
+ *
+ * ```text
  * example.com#%#//scriptlet('log-on-stack-trace', 'property')
  * ```
  *
- * - `property` - required, path to a property. The property must be attached to window.
+ * - `property` — required, path to a property. The property must be attached to window.
+ *
+ * @added v1.5.0.
  */
 /* eslint-enable max-len */
-export function logOnStacktrace(source, property) {
+export function logOnStackTrace(source, property) {
     if (!property) {
         return;
     }
 
     const refineStackTrace = (stackString) => {
+        const regExpValues = backupRegExpValues();
+
         // Split stack trace string by lines and remove first two elements ('Error' and getter call)
         // Remove '    at ' at the start of each string
         const stackSteps = stackString.split('\n').slice(2).map((line) => line.replace(/ {4}at /, ''));
@@ -37,10 +48,15 @@ export function logOnStacktrace(source, property) {
             let funcFullPath;
             /* eslint-disable-next-line no-useless-escape */
             const reg = /\(([^\)]+)\)/;
+            const regFirefox = /(.*?@)(\S+)(:\d+):\d+\)?$/;
             if (line.match(reg)) {
                 funcName = line.split(' ').slice(0, -1).join(' ');
-                /* eslint-disable-next-line prefer-destructuring, no-useless-escape */
+                /* eslint-disable-next-line prefer-destructuring */
                 funcFullPath = line.match(reg)[1];
+            } else if (line.match(regFirefox)) {
+                funcName = line.split('@').slice(0, -1).join(' ');
+                /* eslint-disable-next-line prefer-destructuring */
+                funcFullPath = line.match(regFirefox)[2];
             } else {
                 // For when func name is not available
                 funcName = 'function name is not available';
@@ -54,6 +70,11 @@ export function logOnStacktrace(source, property) {
             /* eslint-disable-next-line prefer-destructuring */
             logInfoObject[pair[0]] = pair[1];
         });
+
+        if (regExpValues.length && regExpValues[0] !== RegExp.$1) {
+            restoreRegExpValues(regExpValues);
+        }
+
         return logInfoObject;
     };
 
@@ -76,32 +97,40 @@ export function logOnStacktrace(source, property) {
         }
 
         let value = base[prop];
-        /* eslint-disable no-console, compat/compat */
+        /* eslint-disable no-console */
         setPropertyAccess(base, prop, {
             get() {
                 hit(source);
-                console.log(`%cGet %c${prop}`, 'color:red;', 'color:green;');
+                logMessage(source, `Get ${prop}`, true);
                 console.table(refineStackTrace(new Error().stack));
                 return value;
             },
             set(newValue) {
                 hit(source);
-                console.log(`%cSet %c${prop}`, 'color:red;', 'color:green;');
+                logMessage(source, `Set ${prop}`, true);
                 console.table(refineStackTrace(new Error().stack));
                 value = newValue;
             },
         });
-        /* eslint-enable no-console, compat/compat */
+        /* eslint-enable no-console */
     };
 
     setChainPropAccess(window, property);
 }
 
-logOnStacktrace.names = [
+export const logOnStackTraceNames = [
     'log-on-stack-trace',
 ];
-logOnStacktrace.injections = [
+
+// eslint-disable-next-line prefer-destructuring
+logOnStackTrace.primaryName = logOnStackTraceNames[0];
+
+logOnStackTrace.injections = [
     getPropertyInChain,
     setPropertyAccess,
     hit,
+    logMessage,
+    isEmptyObject,
+    backupRegExpValues,
+    restoreRegExpValues,
 ];

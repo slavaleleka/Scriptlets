@@ -1,5 +1,5 @@
 /* eslint-disable func-names */
-import { hit, setPropertyAccess } from '../helpers';
+import { hit, setPropertyAccess, logMessage } from '../helpers';
 
 /**
  * @scriptlet prevent-adfly
@@ -10,10 +10,13 @@ import { hit, setPropertyAccess } from '../helpers';
  * Related UBO scriptlet:
  * https://github.com/gorhill/uBlock/wiki/Resources-Library#adfly-defuserjs-
  *
- * **Syntax**
- * ```
+ * ### Syntax
+ *
+ * ```adblock
  * example.org#%#//scriptlet('prevent-adfly')
  * ```
+ *
+ * @added v1.0.4.
  */
 export function preventAdfly(source) {
     const isDigit = (data) => /^\d$/.test(data);
@@ -47,11 +50,9 @@ export function preventAdfly(source) {
         }
         data = data.join('');
         const decodedURL = window.atob(data).slice(16, -16);
-        /* eslint-disable compat/compat */
         if (window.stop) {
             window.stop();
         }
-        /* eslint-enable compat/compat */
         window.onbeforeunload = null;
         window.location.href = decodedURL;
     };
@@ -79,16 +80,20 @@ export function preventAdfly(source) {
     if (result) {
         hit(source);
     } else {
-        window.console.error('Failed to set up prevent-adfly scriptlet');
+        logMessage(source, 'Failed to set up prevent-adfly scriptlet');
     }
 }
 
-preventAdfly.names = [
+export const preventAdflyNames = [
     'prevent-adfly',
-    // aliases are needed for matching the related scriptlet converted into our syntax
-    'adfly-defuser.js',
-    'ubo-adfly-defuser.js',
-    'ubo-adfly-defuser',
+    // there are no aliases for this scriptlet
 ];
 
-preventAdfly.injections = [setPropertyAccess, hit];
+// eslint-disable-next-line prefer-destructuring
+preventAdfly.primaryName = preventAdflyNames[0];
+
+preventAdfly.injections = [
+    setPropertyAccess,
+    hit,
+    logMessage,
+];

@@ -5,12 +5,12 @@ plan:
   key: SCRIPTLETSBUILD
   name: scriptlets - build
 variables:
-  dockerContainer: adguard/puppeteer-runner:8.0--1
+  dockerContainer: adguard/node-ssh:22.14--0
 
 stages:
   - Build:
-      manual: 'false'
-      final: 'false'
+      manual: false
+      final: false
       jobs:
         - Build
 
@@ -21,33 +21,58 @@ Build:
   docker:
     image: "${bamboo.dockerContainer}"
     volumes:
-      ${system.YARN_DIR}: "${bamboo.cacheYarn}"
+      ${system.PNPM_DIR}: "${bamboo.cachePnpm}"
   tasks:
     - checkout:
-        force-clean-build: 'true'
+        force-clean-build: true
     - script:
         interpreter: SHELL
         scripts:
           - |-
             set -e
             set -x
-            ls -alt
 
-            yarn install ${bamboo.varsYarn}
-            yarn browserstack
-            yarn prepare-builds
-            rm -rf node_modules
-        environment: BROWSERSTACK_USER="${bamboo.browserstackUser}" \
-          BROWSERSTACK_KEY="${bamboo.browserstackPassword}"
+            # Fix mixed logs
+            exec 2>&1
+
+            ls -laht
+
+            # Set cache directory
+            pnpm config set store-dir ${bamboo.cachePnpm}
+
+            pnpm install
+
+            pnpm build
+
+            pnpm pack --out scriptlets.tgz
+
+            pnpm wiki
     - inject-variables:
         file: dist/build.txt
         scope: RESULT
         namespace: inject
-    - any-task:
-        plugin-key: com.atlassian.bamboo.plugins.vcs:task.vcs.tagging
-        configuration:
-          selectedRepository: defaultRepository
-          tagName: v${bamboo.inject.version}
+  final-tasks:
+    - script:
+        interpreter: SHELL
+        scripts:
+          - |-
+            set -x
+            set -e
+
+            # Fix mixed logs
+            exec 2>&1
+
+            ls -la
+
+            echo "Size before cleanup:" && du -h | tail -n 1
+            rm -rf node_modules
+            echo "Size after cleanup:" && du -h | tail -n 1
+  artifacts:
+    - name: scriptlets.tgz
+      location: .
+      pattern: scriptlets.tgz
+      shared: true
+      required: true
   requirements:
     - adg-docker: 'true'
 
@@ -56,7 +81,7 @@ triggers: []
 branches:
   create: manually
   delete: never
-  link-to-jira: 'true'
+  link-to-jira: true
 
 notifications:
   - events:

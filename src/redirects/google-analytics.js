@@ -10,16 +10,20 @@ import {
  *
  * @description
  * Mocks Google's Analytics and Tag Manager APIs.
- * [Covers obsolete googletagmanager-gtm redirect functionality](https://github.com/AdguardTeam/Scriptlets/issues/127).
+ * Covers functionality of
+ * the [obsolete googletagmanager-gtm redirect](https://github.com/AdguardTeam/Scriptlets/issues/127).
  *
  * Related UBO redirect resource:
- * https://github.com/gorhill/uBlock/blob/8cd2a1d263a96421487b39040c1d23eb01169484/src/web_accessible_resources/google-analytics_analytics.js
+ * https://github.com/gorhill/uBlock/blob/master/src/web_accessible_resources/google-analytics_analytics.js
  *
- * **Example**
- * ```
+ * ### Examples
+ *
+ * ```adblock
  * ||google-analytics.com/analytics.js$script,redirect=google-analytics
- * ||googletagmanager.com/gtm.js$script,redirect=googletagmanager-gtm
+ * ||googletagmanager.com/gtm.js$script,redirect=google-analytics
  * ```
+ *
+ * @added v1.0.10.
  */
 export function GoogleAnalytics(source) {
     // eslint-disable-next-line func-names
@@ -30,6 +34,8 @@ export function GoogleAnalytics(source) {
     proto.send = noopFunc;
 
     const googleAnalyticsName = window.GoogleAnalyticsObject || 'ga';
+    const queue = window[googleAnalyticsName]?.q;
+
     // a -- fake arg for 'ga.length < 1' antiadblock checking
     // eslint-disable-next-line no-unused-vars
     function ga(a) {
@@ -66,6 +72,14 @@ export function GoogleAnalytics(source) {
     ga.loaded = true;
     window[googleAnalyticsName] = ga;
 
+    if (Array.isArray(queue)) {
+        const push = (arg) => {
+            ga(...arg);
+        };
+        queue.push = push;
+        queue.forEach(push);
+    }
+
     const { dataLayer, google_optimize } = window; // eslint-disable-line camelcase
     if (dataLayer instanceof Object === false) {
         return;
@@ -78,9 +92,9 @@ export function GoogleAnalytics(source) {
 
     /**
      * checks data object and delays callback
-     * @param {Object|Array} data gtag payload
+     *
+     * @param {object|Array} dataObj gtag payload
      * @param {string} funcName callback prop name
-     * @returns
      */
     const handleCallback = (dataObj, funcName) => {
         if (dataObj && typeof dataObj[funcName] === 'function') {
@@ -96,6 +110,10 @@ export function GoogleAnalytics(source) {
                 for (const key in data) {
                     handleCallback(data[key], 'event_callback');
                 }
+                // eslint-disable-next-line no-prototype-builtins
+                if (!data.hasOwnProperty('eventCallback') && !data.hasOwnProperty('eventCallback')) {
+                    [].push.call(window.dataLayer, data);
+                }
             }
             if (Array.isArray(data)) {
                 data.forEach((arg) => {
@@ -107,7 +125,8 @@ export function GoogleAnalytics(source) {
     }
 
     // https://github.com/AdguardTeam/Scriptlets/issues/81
-    if (google_optimize instanceof Object && typeof google_optimize.get === 'function') { // eslint-disable-line camelcase
+    // eslint-disable-next-line camelcase
+    if (google_optimize instanceof Object && typeof google_optimize.get === 'function') {
         const googleOptimizeWrapper = {
             get: noopFunc,
         };
@@ -118,7 +137,7 @@ export function GoogleAnalytics(source) {
     hit(source);
 }
 
-GoogleAnalytics.names = [
+export const GoogleAnalyticsNames = [
     'google-analytics',
     'ubo-google-analytics_analytics.js',
     'google-analytics_analytics.js',
@@ -127,6 +146,9 @@ GoogleAnalytics.names = [
     'ubo-googletagmanager_gtm.js',
     'googletagmanager_gtm.js',
 ];
+
+// eslint-disable-next-line prefer-destructuring
+GoogleAnalytics.primaryName = GoogleAnalyticsNames[0];
 
 GoogleAnalytics.injections = [
     hit,

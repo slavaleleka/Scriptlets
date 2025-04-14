@@ -1,5 +1,5 @@
 /* eslint-disable no-underscore-dangle */
-import { hit, noopFunc } from '../helpers';
+import { hit, noopFunc, logMessage } from '../helpers';
 
 /**
  * @redirect google-analytics-ga
@@ -8,12 +8,15 @@ import { hit, noopFunc } from '../helpers';
  * Mocks old Google Analytics API.
  *
  * Related UBO redirect resource:
- * https://github.com/gorhill/uBlock/blob/a94df7f3b27080ae2dcb3b914ace39c0c294d2f6/src/web_accessible_resources/google-analytics_ga.js
+ * https://github.com/gorhill/uBlock/blob/master/src/web_accessible_resources/google-analytics_ga.js
  *
- * **Example**
- * ```
+ * ### Examples
+ *
+ * ```adblock
  * ||google-analytics.com/ga.js$script,redirect=google-analytics-ga
  * ```
+ *
+ * @added v1.0.10.
  */
 export function GoogleAnalyticsGa(source) {
     // Gaq constructor
@@ -93,11 +96,7 @@ export function GoogleAnalyticsGa(source) {
         try {
             window.location.assign(url);
         } catch (e) {
-            // log the error only while debugging
-            if (source.verbose) {
-                // eslint-disable-next-line no-console
-                console.log(e);
-            }
+            logMessage(source, e);
         }
     };
 
@@ -122,10 +121,17 @@ export function GoogleAnalyticsGa(source) {
     hit(source);
 }
 
-GoogleAnalyticsGa.names = [
+export const GoogleAnalyticsGaNames = [
     'google-analytics-ga',
     'ubo-google-analytics_ga.js',
     'google-analytics_ga.js',
 ];
 
-GoogleAnalyticsGa.injections = [hit, noopFunc];
+// eslint-disable-next-line prefer-destructuring
+GoogleAnalyticsGa.primaryName = GoogleAnalyticsGaNames[0];
+
+GoogleAnalyticsGa.injections = [
+    hit,
+    noopFunc,
+    logMessage,
+];

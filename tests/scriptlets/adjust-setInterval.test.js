@@ -1,9 +1,5 @@
 /* eslint-disable no-underscore-dangle */
-import {
-    runScriptlet,
-    clearGlobalProps,
-    getRandomNumber,
-} from '../helpers';
+import { runScriptlet, clearGlobalProps, getRandomNumber } from '../helpers';
 
 const { test, module } = QUnit;
 const name = 'adjust-setInterval';
@@ -153,6 +149,29 @@ test('all params, boost < 1 (boosting)', (assert) => {
     }, 150);
 });
 
+test('all params, boost < 1 (boosting 0.001)', (assert) => {
+    const scriptletArgs = ['intervalValue', '100000', '0.001'];
+    runScriptlet(name, scriptletArgs);
+
+    const done1 = assert.async();
+    const done2 = assert.async();
+
+    const interval = setInterval(() => {
+        window.intervalValue = 'value';
+    }, 100000); // scriptlet should make it '100'
+
+    setTimeout(() => {
+        assert.notOk(window.intervalValue, 'Still not defined');
+        done1();
+    }, 50);
+
+    setTimeout(() => {
+        assert.strictEqual(window.intervalValue, 'value', 'Should be defined');
+        clearInterval(interval);
+        done2();
+    }, 150);
+});
+
 test('all params, invalid boost value --> 0.05 by default', (assert) => {
     const scriptletArgs = ['intervalValue', '1000', 'abc'];
     runScriptlet(name, scriptletArgs);
@@ -266,4 +285,30 @@ test('no match -- invalid regexp pattern', (assert) => {
         clearInterval(testInterval);
         done2();
     }, 150);
+});
+
+test('no match -- invalid callback - undefined', (assert) => {
+    const callback = undefined;
+
+    let loggedMessage;
+    // eslint-disable-next-line no-console
+    console.log = function log(input) {
+        if (input.includes('trace')) {
+            return;
+        }
+        loggedMessage = input;
+    };
+
+    const scriptletArgs = ['.?'];
+    runScriptlet(name, scriptletArgs);
+
+    const testInterval = setInterval(callback, 100);
+
+    assert.strictEqual(window.hit, undefined, 'hit should not fire');
+    assert.strictEqual(
+        loggedMessage,
+        `${name}: Scriptlet can't be applied because of invalid callback: '${String(callback)}'`,
+        'console.logged warning ok',
+    );
+    clearInterval(testInterval);
 });

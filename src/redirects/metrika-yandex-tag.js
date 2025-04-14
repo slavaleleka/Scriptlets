@@ -7,10 +7,13 @@ import { hit, noopFunc } from '../helpers';
  * Mocks Yandex Metrika API.
  * https://yandex.ru/support/metrica/objects/method-reference.html
  *
- * **Example**
- * ```
+ * ### Examples
+ *
+ * ```adblock
  * ||mc.yandex.ru/metrika/tag.js$script,redirect=metrika-yandex-tag
  * ```
+ *
+ * @added v1.0.10.
  */
 export function metrikaYandexTag(source) {
     const asyncCallbackFromOptions = (id, param, options = {}) => {
@@ -39,6 +42,8 @@ export function metrikaYandexTag(source) {
 
     /**
      * https://yandex.ru/support/metrica/objects/get-client-id.html
+     *
+     * @param {string} id
      * @param {Function} cb
      */
     const getClientID = (id, cb) => {
@@ -65,8 +70,10 @@ export function metrikaYandexTag(source) {
 
     /**
      * https://yandex.ru/support/metrica/objects/reachgoal.html
+     *
+     * @param {string} id
      * @param {string} target
-     * @param {Object} params
+     * @param {object} params
      * @param {Function} callback
      * @param {any} ctx
      */
@@ -84,6 +91,9 @@ export function metrikaYandexTag(source) {
      */
     const userParams = noopFunc;
 
+    // https://github.com/AdguardTeam/Scriptlets/issues/198
+    const destruct = noopFunc;
+
     const api = {
         addFileExtension,
         extLink,
@@ -95,34 +105,43 @@ export function metrikaYandexTag(source) {
         reachGoal,
         setUserID,
         userParams,
+        destruct,
     };
-
-    function ym(id, funcName, ...args) {
-        return api[funcName] && api[funcName](id, ...args);
-    }
-    ym.a = [];
 
     function init(id) {
         // yaCounter object should provide api
         window[`yaCounter${id}`] = api;
+        document.dispatchEvent(new Event(`yacounter${id}inited`));
+    }
+
+    function ym(id, funcName, ...args) {
+        if (funcName === 'init') {
+            return init(id);
+        }
+        return api[funcName] && api[funcName](id, ...args);
     }
 
     if (typeof window.ym === 'undefined') {
         window.ym = ym;
+        ym.a = [];
     } else if (window.ym && window.ym.a) {
-        // Get id for yaCounter object
+        // Keep initial counters array intact
+        ym.a = window.ym.a;
+        window.ym = ym;
+
         window.ym.a.forEach((params) => {
             const id = params[0];
             init(id);
         });
-        window.ym = ym;
     }
-
     hit(source);
 }
 
-metrikaYandexTag.names = [
+export const metrikaYandexTagNames = [
     'metrika-yandex-tag',
 ];
+
+// eslint-disable-next-line prefer-destructuring
+metrikaYandexTag.primaryName = metrikaYandexTagNames[0];
 
 metrikaYandexTag.injections = [hit, noopFunc];

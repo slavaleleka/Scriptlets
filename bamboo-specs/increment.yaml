@@ -5,12 +5,12 @@ plan:
   key: SCRIPTLETSINCR
   name: scriptlets - increment
 variables:
-  dockerContainer: adguard/node-ssh:15.14--6
+  dockerContainer: adguard/node-ssh:22.14--0
 
 stages:
   - Increment:
-      manual: 'false'
-      final: 'false'
+      manual: true
+      final: false
       jobs:
         - Increment
 
@@ -19,19 +19,30 @@ Increment:
   docker:
     image: "${bamboo.dockerContainer}"
     volumes:
-      ${system.YARN_DIR}: "${bamboo.cacheYarn}"
+      ${system.PNPM_DIR}: "${bamboo.cachePnpm}"
+  other:
+    clean-working-dir: true
   tasks:
     - checkout:
-        force-clean-build: 'true'
+        force-clean-build: true
     - script:
         interpreter: SHELL
         scripts:
           - |-
-            set -e
-            set -x
-            ls -alt
+            #!/bin/bash
+            set -e -f -u -x
 
-            yarn increment
+            # Explicitly checkout the revision that we need.
+            git checkout "${bamboo.repository.revision.number}"
+
+            # do not increment for dist deploy after release build
+            if ! [[ `git log -1 --pretty=%s` =~ "deploy: update dist" ]];then
+              git checkout master
+              set -e
+              set -x
+              ls -alt
+              pnpm increment
+            fi
     - any-task:
         plugin-key: com.atlassian.bamboo.plugins.vcs:task.vcs.commit
         configuration:
@@ -43,7 +54,7 @@ Increment:
 branches:
   create: manually
   delete: never
-  link-to-jira: 'true'
+  link-to-jira: true
 
 labels: []
 other:

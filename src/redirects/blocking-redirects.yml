@@ -4,14 +4,16 @@
 # use ">" if property contains long string
 
 - title: click2load.html
+  added: v1.5.0
   description: |-
     Redirects resource and replaces supposed content by decoy frame with button for original content recovering
 
     Related UBO redirect resource:
     https://github.com/gorhill/uBlock/blob/1.31.0/src/web_accessible_resources/click2load.html
 
-    **Example**
-    ```
+    ### Example
+
+    ```adblock
     ||youtube.com/embed/$frame,third-party,redirect=click2load.html
     ```
   aliases:

@@ -1,10 +1,11 @@
-/* eslint-disable compat/compat,no-console,no-await-in-loop */
+/* eslint-disable no-console,no-await-in-loop */
 const webdriver = require('selenium-webdriver');
 const BrowserStackLocal = require('browserstack-local');
 const dotenv = require('dotenv');
-const path = require('path');
-const fs = require('fs');
+const path = require('node:path');
+const fs = require('node:fs');
 const kleur = require('kleur');
+
 const {
     server,
     port,
@@ -37,7 +38,7 @@ const CAPABILITIES = [
     },
     {
         browserName: 'Safari',
-        browserVersion: '10',
+        browserVersion: '13',
         os: 'OS X',
         osVersion: 'Sierra',
     },

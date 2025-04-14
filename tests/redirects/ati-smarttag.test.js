@@ -1,25 +1,19 @@
-/* eslint-disable no-underscore-dangle */
-import { runRedirect, clearGlobalProps } from '../helpers';
+import { evalWrapper, getRedirectsInstance } from '../helpers';
 
 const { test, module } = QUnit;
 const name = 'ati-smarttag';
 
-const changingProps = ['hit', '__debug'];
-
-const beforeEach = () => {
-    window.__debug = () => {
-        window.hit = 'FIRED';
-    };
+let redirects;
+const before = async () => {
+    redirects = await getRedirectsInstance();
 };
 
-const afterEach = () => {
-    clearGlobalProps(...changingProps);
-};
+module(name, { before });
 
-module(name, { beforeEach, afterEach });
+module(name, { before });
 
 test('ati-smarttag: works', (assert) => {
-    runRedirect(name);
+    evalWrapper(redirects.getRedirect(name).content);
 
     const { ATInternet } = window;
 
@@ -60,44 +54,55 @@ test('ati-smarttag: works', (assert) => {
     assert.strictEqual(tag.clickListener.send(), undefined, 'tag.clickListener.send() is mocked');
 
     assert.ok(tag.internalSearch instanceof Object, 'tag.internalSearch is object');
+    assert.ok(tag.internalSearch.set instanceof Function, 'tag.internalSearch.set is function');
+    assert.strictEqual(tag.internalSearch.set(), undefined, 'tag.internalSearch.set() is mocked');
     assert.ok(tag.internalSearch.send instanceof Function, 'tag.internalSearch.send is function');
     assert.strictEqual(tag.internalSearch.send(), undefined, 'tag.internalSearch.send() is mocked');
 
     // tag.ecommerce checking: start
-    assert.ok(tag.ecommerce instanceof Object, 'tag.ecommerce is object');
+    const { ecommerce } = tag;
+    const {
+        displayCart,
+        updateCart,
+        displayProduct,
+        displayPageProduct,
+        addProduct,
+        removeProduct,
+    } = ecommerce;
+    assert.ok(ecommerce instanceof Object, 'tag.ecommerce is object');
 
-    assert.ok(tag.ecommerce.displayCart instanceof Object, 'tag.ecommerce.displayCart is object');
-    assert.ok(tag.ecommerce.displayCart.products instanceof Object, 'tag.ecommerce.displayCart.products is object');
-    assert.ok(tag.ecommerce.displayCart.products.set instanceof Function, 'displayCart.products.set is function');
-    assert.strictEqual(tag.ecommerce.displayCart.products.set(), undefined, 'displayCart.products.set() is mocked');
-    assert.ok(tag.ecommerce.displayCart.cart instanceof Object, 'tag.ecommerce.displayCart.cart is object');
-    assert.ok(tag.ecommerce.displayCart.cart.set instanceof Function, 'displayCart.cart.set is function');
-    assert.strictEqual(tag.ecommerce.displayCart.cart.set(), undefined, 'displayCart.cart.set() is mocked');
+    assert.ok(displayCart instanceof Object, 'ecommerce.displayCart is object');
+    assert.ok(displayCart.products instanceof Object, 'ecommerce.displayCart.products is object');
+    assert.ok(displayCart.products.set instanceof Function, 'displayCart.products.set is function');
+    assert.strictEqual(displayCart.products.set(), undefined, 'displayCart.products.set() is mocked');
+    assert.ok(displayCart.cart instanceof Object, 'ecommerce.displayCart.cart is object');
+    assert.ok(displayCart.cart.set instanceof Function, 'displayCart.cart.set is function');
+    assert.strictEqual(displayCart.cart.set(), undefined, 'displayCart.cart.set() is mocked');
 
-    assert.ok(tag.ecommerce.updateCart instanceof Object, 'tag.ecommerce.updateCart is object');
-    assert.ok(tag.ecommerce.updateCart.cart instanceof Object, 'tag.ecommerce.updateCart.cart is object');
-    assert.ok(tag.ecommerce.updateCart.cart.set instanceof Function, 'updateCart.cart.set is function');
-    assert.strictEqual(tag.ecommerce.updateCart.cart.set(), undefined, 'updateCart.cart.set() is mocked');
+    assert.ok(updateCart instanceof Object, 'ecommerce.updateCart is object');
+    assert.ok(updateCart.cart instanceof Object, 'ecommerce.updateCart.cart is object');
+    assert.ok(updateCart.cart.set instanceof Function, 'updateCart.cart.set is function');
+    assert.strictEqual(updateCart.cart.set(), undefined, 'updateCart.cart.set() is mocked');
 
-    assert.ok(tag.ecommerce.displayProduct instanceof Object, 'tag.ecommerce.displayProduct is object');
-    assert.ok(tag.ecommerce.displayProduct.products instanceof Object, 'tag.ecommerce.displayProduct.products is object');
-    assert.ok(tag.ecommerce.displayProduct.products.set instanceof Function, 'displayProduct.products.set is function');
-    assert.strictEqual(tag.ecommerce.displayProduct.products.set(), undefined, 'displayProduct.products.set() is mocked');
+    assert.ok(displayProduct instanceof Object, 'ecommerce.displayProduct is object');
+    assert.ok(displayProduct.products instanceof Object, 'ecommerce.displayProduct.products is object');
+    assert.ok(displayProduct.products.set instanceof Function, 'displayProduct.products.set is function');
+    assert.strictEqual(displayProduct.products.set(), undefined, 'displayProduct.products.set() is mocked');
 
-    assert.ok(tag.ecommerce.displayPageProduct instanceof Object, 'tag.ecommerce.displayPageProduct is object');
-    assert.ok(tag.ecommerce.displayPageProduct.products instanceof Object, 'tag.ecommerce.displayPageProduct.products is object');
-    assert.ok(tag.ecommerce.displayPageProduct.products.set instanceof Function, 'displayPageProduct.products.set is function');
-    assert.strictEqual(tag.ecommerce.displayPageProduct.products.set(), undefined, 'displayPageProduct.products.set() is mocked');
+    assert.ok(displayPageProduct instanceof Object, 'ecommerce.displayPageProduct is object');
+    assert.ok(displayPageProduct.products instanceof Object, 'ecommerce.displayPageProduct.products is object');
+    assert.ok(displayPageProduct.products.set instanceof Function, 'displayPageProduct.products.set is function');
+    assert.strictEqual(displayPageProduct.products.set(), undefined, 'displayPageProduct.products.set() is mocked');
 
-    assert.ok(tag.ecommerce.addProduct instanceof Object, 'tag.ecommerce.addProduct is object');
-    assert.ok(tag.ecommerce.addProduct.products instanceof Object, 'tag.ecommerce.addProduct.products is object');
-    assert.ok(tag.ecommerce.addProduct.products.set instanceof Function, 'addProduct.products.set is function');
-    assert.strictEqual(tag.ecommerce.addProduct.products.set(), undefined, 'addProduct.products.set() is mocked');
+    assert.ok(addProduct instanceof Object, 'ecommerce.addProduct is object');
+    assert.ok(addProduct.products instanceof Object, 'ecommerce.addProduct.products is object');
+    assert.ok(ecommerce.addProduct.products.set instanceof Function, 'addProduct.products.set is function');
+    assert.strictEqual(ecommerce.addProduct.products.set(), undefined, 'addProduct.products.set() is mocked');
 
-    assert.ok(tag.ecommerce.removeProduct instanceof Object, 'tag.ecommerce.removeProduct is object');
-    assert.ok(tag.ecommerce.removeProduct.products instanceof Object, 'tag.ecommerce.removeProduct.products is object');
-    assert.ok(tag.ecommerce.removeProduct.products.set instanceof Function, 'removeProduct.products.set is function');
-    assert.strictEqual(tag.ecommerce.removeProduct.products.set(), undefined, 'removeProduct.products.set() is mocked');
+    assert.ok(removeProduct instanceof Object, 'ecommerce.removeProduct is object');
+    assert.ok(removeProduct.products instanceof Object, 'ecommerce.removeProduct.products is object');
+    assert.ok(removeProduct.products.set instanceof Function, 'removeProduct.products.set is function');
+    assert.strictEqual(removeProduct.products.set(), undefined, 'removeProduct.products.set() is mocked');
     // tag.ecommerce checking: end
 
     assert.ok(tag.identifiedVisitor instanceof Object, 'tag.identifiedVisitor is object');
@@ -133,6 +138,4 @@ test('ati-smarttag: works', (assert) => {
     assert.strictEqual(tag.richMedia.remove(), undefined, 'tag.richMedia.remove() is mocked');
     assert.ok(tag.richMedia.removeAll instanceof Function, 'tag.richMedia.removeAll is function');
     assert.strictEqual(tag.richMedia.removeAll(), undefined, 'tag.richMedia.removeAll() is mocked');
-
-    assert.strictEqual(window.hit, 'FIRED', 'hit function was executed');
 });

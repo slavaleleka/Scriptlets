@@ -1,10 +1,9 @@
 /* eslint-disable no-console, camelcase */
-const fs = require('fs');
-const axios = require('axios');
-const {
-    REMOVED_MARKER,
-    COMPATIBILITY_TABLE_DATA_PATH,
-} = require('./constants');
+import fs from 'node:fs';
+import axios from 'axios';
+import { EOL } from 'node:os';
+
+import { REMOVED_MARKER, COMPATIBILITY_TABLE_DATA_PATH } from './constants';
 
 /* ************************************************************************
  *
@@ -14,8 +13,10 @@ const {
 
 /**
  * Checks if arrays contain the same strings
+ *
  * @param {Array} arr1
  * @param {Array} arr2
+ * @returns {boolean}
  */
 const areArraysOfStringsEqual = (arr1, arr2) => {
     if (arr1.length !== arr2.length) {
@@ -30,6 +31,8 @@ const areArraysOfStringsEqual = (arr1, arr2) => {
 
 /**
  * Returns parsed compatibility table
+ *
+ * @returns {object}
  */
 const getCompatibilityTable = () => {
     const rawData = fs.readFileSync(COMPATIBILITY_TABLE_DATA_PATH);
@@ -39,7 +42,9 @@ const getCompatibilityTable = () => {
 
 /**
  * Returns list of scriptlets listed in table for specified platform
+ *
  * @param {"ubo"|"abp"} platform
+ * @returns {string[]}
  */
 const getScriptletsFromTable = (platform) => {
     const { scriptlets } = getCompatibilityTable();
@@ -48,7 +53,9 @@ const getScriptletsFromTable = (platform) => {
 
 /**
  * Returns list of redirects listed in table for specified platform
+ *
  * @param {"ubo"|"abp"} platform
+ * @returns {string[]}
  */
 const getRedirectsFromTable = (platform) => {
     const { redirects } = getCompatibilityTable();
@@ -56,20 +63,25 @@ const getRedirectsFromTable = (platform) => {
 };
 
 /**
+ * @typedef {object} Diff
+ * @property {string[]} added added content
+ * @property {string[]} removed removed content
+ */
+
+/**
  * Finds a difference between old and new array
+ *
  * @param {Array} oldList
  * @param {Array} newList
+ * @returns {Diff|null}
  */
 const getDiff = (oldList, newList) => {
     const diff = {
-        removed: [],
         added: [],
+        removed: [],
     };
 
-    diff.removed = oldList.filter((item) => (
-        !newList.includes(item)
-        && item.indexOf(REMOVED_MARKER) === -1
-    ));
+    diff.removed = oldList.filter((item) => !newList.includes(item) && !item.includes(REMOVED_MARKER));
     diff.added = newList.filter((item) => !oldList.includes(item));
 
     return (diff.removed.length || diff.added.length) ? diff : null;
@@ -77,6 +89,7 @@ const getDiff = (oldList, newList) => {
 
 /**
  * Marks removed rules with (removed) and adds new rules to the end of the table
+ *
  * @param {{removed: Array, added: Array}} diff Object with diffs for certain type and platform
  * @param {"scriptlets"|"redirects"} ruleType
  * @param {"ubo"|"abp"} platform
@@ -119,58 +132,97 @@ function markTableWithDiff(diff, ruleType, platform) {
  * UBO Scriptlets github raw resources
  */
 const UBO_SCRIPTLETS_FILE = 'https://raw.githubusercontent.com/gorhill/uBlock/master/assets/resources/scriptlets.js';
-const ALIAS_MARKER = 'alias';
+const SCRIPTLETS_START_MARKER = 'Injectable scriptlets';
+const DIVIDER_MARKER = 'builtinScriptlets.push';
+const COMMENT_MARKER = '//';
+const FUNCTION_MARKER = 'function ';
+const NAME_MARKER_START = "name: '";
+const NAME_MARKER_END = "',";
+const ALIASES_MARKER_START = 'aliases: [';
+const ALIASES_MARKER_END = '],';
 
 /**
  * Make request to UBO repo(master), parses and returns the list of UBO scriptlets
+ *
+ * @returns {string[]} ubo scriptlets' names
  */
 async function getCurrentUBOScriptlets() {
     console.log('Downloading UBO file...');
     const { data } = await axios.get(UBO_SCRIPTLETS_FILE);
     console.log('UBO done');
 
-    const regexp = /\/\/\/\s(\S*\.js|alias\s\S*\.js)/g;
-    const parsedNames = [];
-
-    let result;
-    // eslint-disable-next-line no-cond-assign
-    while (result = regexp.exec(data)) {
-        // array of parsed UBO scriptlets and their aliases
-        parsedNames.push(result[1]);
+    const startIndex = data.indexOf(SCRIPTLETS_START_MARKER);
+    if (startIndex === -1) {
+        throw new Error('UBO file format has been changed');
     }
 
-    let nameRecord;
     const names = [];
-    let aliasName;
-    let aliases = [];
-    let i = 0;
-    while (i < parsedNames.length) {
-        let k = 1;
-        // check if scriptlet has aliases (which might be next after it)
-        while ((i + k < parsedNames.length) && (parsedNames[i + k].includes(ALIAS_MARKER))) {
-            aliasName = parsedNames[i + k].replace(/alias\s/, '');
-            aliases.push(aliasName);
-            k += 1;
+
+    const chunks = data.slice(startIndex).split(DIVIDER_MARKER);
+
+    chunks.forEach((chunk) => {
+        let name;
+        const aliases = [];
+
+        const functionDefinitionIndex = chunk.indexOf(FUNCTION_MARKER) || chunk.length;
+        const scriptletObjectText = chunk.slice(0, functionDefinitionIndex).trim();
+
+        let areAliasesStarted = false;
+
+        const textLines = scriptletObjectText.split(EOL);
+        for (let i = 0; i < textLines.length; i += 1) {
+            const line = textLines[i].trim();
+
+            if (line.startsWith(COMMENT_MARKER)) {
+                continue;
+            }
+            // parse the name
+            if (line.startsWith(NAME_MARKER_START)) {
+                name = line.slice(NAME_MARKER_START.length, line.indexOf(NAME_MARKER_END));
+                continue;
+            }
+            // parse the aliases
+            if (line.startsWith(ALIASES_MARKER_START)) {
+                // now aliases array is set as multiline list
+                // so the flag is needed for correct parsing of following lines
+                areAliasesStarted = true;
+                continue;
+            }
+            if (areAliasesStarted) {
+                if (line === ALIASES_MARKER_END) {
+                    areAliasesStarted = false;
+                    // 'name' string goes first and 'aliases' string goes after it
+                    // so if aliases are parsed, no need to continue lines iterating
+                    break;
+                }
+                const alias = line
+                    .replace(/,?$/g, '')
+                    .replace(/'/g, '');
+                aliases.push(alias);
+                continue;
+            }
         }
 
+        if (!name) {
+            return;
+        }
+
+        let namesStr = name;
         if (aliases.length > 0) {
-            nameRecord = `${parsedNames[i]} (${aliases.join(', ')})`;
-            aliases = [];
-            i += k;
-        } else {
-            nameRecord = parsedNames[i];
-            i += 1;
+            namesStr += ` (${aliases.join(', ')})`;
         }
-
-        names.push(nameRecord);
-    }
+        names.push(namesStr);
+    });
 
     return names;
 }
 
 /**
  * Check updates for UBO Scriptlets
+ *
+ * @returns {Diff|null} diff
  */
+// eslint-disable-next-line no-unused-vars
 async function checkForUBOScriptletsUpdates() {
     const oldList = getScriptletsFromTable('ubo');
     const newList = await getCurrentUBOScriptlets();
@@ -191,17 +243,19 @@ async function checkForUBOScriptletsUpdates() {
 /**
  * UBO redirects github page
  */
-const UBO_REDIRECTS_DIRECTORY_FILE = 'https://raw.githubusercontent.com/gorhill/uBlock/master/src/js/redirect-engine.js';
+const UBO_REDIRECTS_DIRECTORY_FILE = 'https://raw.githubusercontent.com/gorhill/uBlock/master/src/js/redirect-resources.js';
 
 /**
  * Make request to UBO repo(master), parses and returns the list of UBO redirects
+ *
+ * @returns {string[]} ubo redirects' names
  */
 async function getCurrentUBORedirects() {
     console.log('Downloading UBO page...');
     let { data } = await axios.get(UBO_REDIRECTS_DIRECTORY_FILE);
     console.log('Done.');
 
-    const startTrigger = 'const redirectableResources = new Map([';
+    const startTrigger = 'export default new Map([';
     const endTrigger = ']);';
 
     const startIndex = data.indexOf(startTrigger);
@@ -222,6 +276,8 @@ async function getCurrentUBORedirects() {
 
 /**
  * Checks updates for UBO redirects
+ *
+ * @returns {Diff|null} diff
  */
 async function checkForUBORedirectsUpdates() {
     const oldList = getRedirectsFromTable('ubo');
@@ -248,6 +304,8 @@ const ABP_SNIPPETS_FILE = 'https://raw.githubusercontent.com/adblockplus/adblock
 
 /**
  * Checks for snippets updates
+ *
+ * @returns {string[]} abp snippets' names
  */
 async function getCurrentABPSnippets() { // eslint-disable-line no-unused-vars
     console.log('Downloading ABP file...');
@@ -269,8 +327,10 @@ async function getCurrentABPSnippets() { // eslint-disable-line no-unused-vars
 
 /**
  * Checks for ABP Snippets updates
+ *
+ * @returns {Diff|null} diff
  */
-async function checkForABPScriptletssUpdates() {
+async function checkForABPScriptletsUpdates() {
     const oldList = getScriptletsFromTable('abp');
     // ABP_SNIPPETS_FILE is unavailable
     // TODO: fix later, AG-11891
@@ -294,14 +354,19 @@ async function checkForABPScriptletssUpdates() {
 /**
  * ABP redirects github raw resource
  */
-const ABP_REDIRECTS_FILE = 'https://raw.githubusercontent.com/adblockplus/adblockpluscore/master/data/resources.json';
+const ABP_REDIRECTS_FILE_PATH = 'https://raw.githubusercontent.com/adblockplus/adblockpluscore/master/data/resources.js';
+
+const ABP_REDIRECTS_FILE_SKIP_START = 'exports.resources = ';
 
 /**
- * Checks for snippets updates
+ * Gets ABP redirects
+ *
+ * @returns {string[]} abp redirects' names
  */
 async function getCurrentABPRedirects() {
     console.log('Downloading ABP file...');
-    const { data } = await axios.get(ABP_REDIRECTS_FILE);
+    const { data: rawData } = await axios.get(ABP_REDIRECTS_FILE_PATH);
+    const data = JSON.parse(rawData.replace(ABP_REDIRECTS_FILE_SKIP_START, ''));
     console.log('ABP done.');
 
     const names = Object.keys(data);
@@ -310,7 +375,9 @@ async function getCurrentABPRedirects() {
 }
 
 /**
- * Checks for ABP Snippets updates
+ * Checks for ABP redirects updates
+ *
+ * @returns {Diff|null} diff
  */
 async function checkForABPRedirectsUpdates() {
     const oldList = getRedirectsFromTable('abp');
@@ -328,17 +395,18 @@ async function checkForABPRedirectsUpdates() {
  */
 (async function init() {
     const UBORedirectsDiff = await checkForUBORedirectsUpdates();
-    const UBOScriptletsDiff = await checkForUBOScriptletsUpdates();
+    // TODO: fix building wiki, ubo changed format of their source. AG-39652
+    // const UBOScriptletsDiff = await checkForUBOScriptletsUpdates();
     const ABPRedirectsDiff = await checkForABPRedirectsUpdates();
-    const ABPScriptletsDiff = await checkForABPScriptletssUpdates();
+    const ABPScriptletsDiff = await checkForABPScriptletsUpdates();
 
     if (UBORedirectsDiff) {
         markTableWithDiff(UBORedirectsDiff, 'redirects', 'ubo');
     }
 
-    if (UBOScriptletsDiff) {
-        markTableWithDiff(UBOScriptletsDiff, 'scriptlets', 'ubo');
-    }
+    // if (UBOScriptletsDiff) {
+    //     markTableWithDiff(UBOScriptletsDiff, 'scriptlets', 'ubo');
+    // }
 
     if (ABPRedirectsDiff) {
         markTableWithDiff(ABPRedirectsDiff, 'redirects', 'abp');
@@ -348,7 +416,12 @@ async function checkForABPRedirectsUpdates() {
         markTableWithDiff(ABPScriptletsDiff, 'scriptlets', 'abp');
     }
 
-    const diffs = [UBORedirectsDiff, UBOScriptletsDiff, ABPRedirectsDiff, ABPScriptletsDiff];
+    const diffs = [
+        UBORedirectsDiff,
+        // UBOScriptletsDiff,
+        ABPRedirectsDiff,
+        ABPScriptletsDiff,
+    ];
 
     if (diffs.some((diff) => !!diff)) {
         const removed = diffs
@@ -360,9 +433,11 @@ async function checkForABPRedirectsUpdates() {
             .filter((item) => !!item)
             .join();
         const message = `
-            Some sources were changed.
+            Some sources were changed:
             ${removed.length ? `Removed: ${removed}.` : ''}
             ${added.length ? `Added: ${added}.` : ''}
+
+            Update compatibility tables.
         `;
 
         throw new Error(message);

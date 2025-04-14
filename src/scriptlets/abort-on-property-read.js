@@ -4,6 +4,7 @@ import {
     getPropertyInChain,
     createOnErrorHandler,
     hit,
+    isEmptyObject,
 } from '../helpers';
 
 /* eslint-disable max-len */
@@ -17,23 +18,27 @@ import {
  * https://github.com/gorhill/uBlock/wiki/Resources-Library#abort-on-property-readjs-
  *
  * Related ABP source:
- * https://github.com/adblockplus/adblockpluscore/blob/6b2a309054cc23432102b85d13f12559639ef495/lib/content/snippets.js#L864
+ * https://gitlab.com/eyeo/snippets/-/blob/main/source/behavioral/abort-on-property-read.js
  *
- * **Syntax**
- * ```
+ * ### Syntax
+ *
+ * ```text
  * example.org#%#//scriptlet('abort-on-property-read', property)
  * ```
  *
- * - `property` - required, path to a property (joined with `.` if needed). The property must be attached to `window`
+ * - `property` — required, path to a property (joined with `.` if needed). The property must be attached to `window`
  *
- * **Examples**
- * ```
+ * ### Examples
+ *
+ * ```adblock
  * ! Aborts script when it tries to access `window.alert`
  * example.org#%#//scriptlet('abort-on-property-read', 'alert')
  *
  * ! Aborts script when it tries to access `navigator.language`
  * example.org#%#//scriptlet('abort-on-property-read', 'navigator.language')
  * ```
+ *
+ * @added v1.0.4.
  */
 /* eslint-enable max-len */
 export function abortOnPropertyRead(source, property) {
@@ -73,11 +78,10 @@ export function abortOnPropertyRead(source, property) {
 
     setChainPropAccess(window, property);
 
-    window.onerror = createOnErrorHandler(rid)
-        .bind();
+    window.onerror = createOnErrorHandler(rid).bind();
 }
 
-abortOnPropertyRead.names = [
+export const abortOnPropertyReadNames = [
     'abort-on-property-read',
     // aliases are needed for matching the related scriptlet converted into our syntax
     'abort-on-property-read.js',
@@ -88,10 +92,15 @@ abortOnPropertyRead.names = [
     'ubo-aopr',
     'abp-abort-on-property-read',
 ];
+
+// eslint-disable-next-line prefer-destructuring
+abortOnPropertyRead.primaryName = abortOnPropertyReadNames[0];
+
 abortOnPropertyRead.injections = [
     randomId,
     setPropertyAccess,
     getPropertyInChain,
     createOnErrorHandler,
     hit,
+    isEmptyObject,
 ];

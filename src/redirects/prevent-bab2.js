@@ -12,13 +12,15 @@ import { hit } from '../helpers';
  *
  * See [redirect description](../wiki/about-redirects.md#prevent-bab2).
  *
- * **Syntax**
- * ```
+ * ### Examples
+ *
+ * ```adblock
  * /blockadblock.$script,redirect=prevent-bab2
  * ```
+ *
+ * @added v1.5.0.
  */
 export function preventBab2(source) {
-    // eslint-disable-next-line compat/compat
     const script = document.currentScript;
     if (script === null) {
         return;
@@ -45,10 +47,13 @@ export function preventBab2(source) {
     hit(source);
 }
 
-preventBab2.names = [
+export const preventBab2Names = [
     'prevent-bab2',
     // aliases are needed for matching the related scriptlet converted into our syntax
     'nobab2.js',
 ];
+
+// eslint-disable-next-line prefer-destructuring
+preventBab2.primaryName = preventBab2Names[0];
 
 preventBab2.injections = [hit];

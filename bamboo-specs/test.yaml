@@ -5,12 +5,12 @@ plan:
   key: SCRIPTLETSTEST
   name: scriptlets - test new
 variables:
-  dockerPuppeteer: adguard/puppeteer-runner:8.0--1
+  dockerPuppeteer: adguard/puppeteer-runner:22.14--24.5--1
 
 stages:
   - Build:
-      manual: 'false'
-      final: 'false'
+      manual: false
+      final: false
       jobs:
         - Build
 
@@ -19,24 +19,58 @@ Build:
   docker:
     image: "${bamboo.dockerPuppeteer}"
     volumes:
-      ${system.YARN_DIR}: "${bamboo.cacheYarn}"
+      ${system.PNPM_DIR}: "${bamboo.cachePnpm}"
   tasks:
     - checkout:
-        force-clean-build: 'true'
+        force-clean-build: true
     - script:
         interpreter: SHELL
         scripts:
           - |-
             set -e
             set -x
-            ls -alt
 
-            yarn install
-            yarn test
-            yarn build
-            rm -rf node_modules
+            # Fix mixed logs
+            exec 2>&1
+
+            ls -laht
+
+            pnpm install
+
+            # build docs to lint them later
+            # check compatibility table updates and build it and build wiki docs
+            pnpm wiki
+
+            pnpm test
+            pnpm build
+
+            # lint code and docs. it should be run after `pnpm build`
+            pnpm lint
   final-tasks:
-    - clean
+    - script:
+        interpreter: SHELL
+        scripts:
+          - |-
+            set -x
+            set -e
+
+            # Fix mixed logs
+            exec 2>&1
+
+            ls -la
+
+            echo "Size before cleanup:" && du -h | tail -n 1
+            rm -rf node_modules
+            echo "Size after cleanup:" && du -h | tail -n 1
+  artifacts:
+    - name: scriptlets.corelibs.json
+      location: dist
+      pattern: scriptlets.corelibs.json
+      required: true
+    - name: redirects.json
+      location: dist
+      pattern: redirects.json
+      required: true
   requirements:
     - adg-docker: 'true'
 
@@ -45,7 +79,7 @@ branches:
   delete:
     after-deleted-days: '1'
     after-inactive-days: '5'
-  link-to-jira: 'true'
+  link-to-jira: true
 
 notifications:
   - events:

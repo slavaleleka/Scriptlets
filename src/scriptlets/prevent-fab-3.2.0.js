@@ -1,4 +1,4 @@
-/* eslint-disable no-console, func-names, no-multi-assign */
+/* eslint-disable func-names, no-multi-assign */
 import { hit, noopFunc, noopThis } from '../helpers';
 
 /**
@@ -10,10 +10,13 @@ import { hit, noopFunc, noopThis } from '../helpers';
  * Related UBO scriptlet:
  * https://github.com/gorhill/uBlock/wiki/Resources-Library#fuckadblockjs-320-
  *
- * **Syntax**
- * ```
+ * ### Syntax
+ *
+ * ```adblock
  * example.org#%#//scriptlet('prevent-fab-3.2.0')
  * ```
+ *
+ * @added v1.0.4.
  */
 export function preventFab(source) {
     hit(source);
@@ -85,7 +88,7 @@ export function preventFab(source) {
     }
 }
 
-preventFab.names = [
+export const preventFabNames = [
     'prevent-fab-3.2.0',
     // aliases are needed for matching the related scriptlet converted into our syntax
     'nofab.js',
@@ -94,5 +97,8 @@ preventFab.names = [
     'ubo-fuckadblock.js-3.2.0',
     'ubo-nofab',
 ];
+
+// eslint-disable-next-line prefer-destructuring
+preventFab.primaryName = preventFabNames[0];
 
 preventFab.injections = [hit, noopFunc, noopThis];

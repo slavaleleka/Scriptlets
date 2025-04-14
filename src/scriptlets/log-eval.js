@@ -1,5 +1,5 @@
-/* eslint-disable no-console, no-eval */
-import { hit } from '../helpers';
+/* eslint-disable no-eval */
+import { hit, logMessage } from '../helpers';
 
 /**
  * @scriptlet log-eval
@@ -7,18 +7,20 @@ import { hit } from '../helpers';
  * @description
  * Logs all `eval()` or `new Function()` calls to the console.
  *
- * **Syntax**
- * ```
+ * ### Syntax
+ *
+ * ```adblock
  * example.org#%#//scriptlet('log-eval')
  * ```
+ *
+ * @added v1.0.4.
  */
 export function logEval(source) {
-    const log = console.log.bind(console);
     // wrap eval function
     const nativeEval = window.eval;
     function evalWrapper(str) {
         hit(source);
-        log(`eval("${str}")`);
+        logMessage(source, `eval("${str}")`, true);
         return nativeEval(str);
     }
     window.eval = evalWrapper;
@@ -28,7 +30,7 @@ export function logEval(source) {
 
     function FunctionWrapper(...args) {
         hit(source);
-        log(`new Function(${args.join(', ')})`);
+        logMessage(source, `new Function(${args.join(', ')})`, true);
         return nativeFunction.apply(this, [...args]);
     }
 
@@ -38,8 +40,11 @@ export function logEval(source) {
     window.Function = FunctionWrapper;
 }
 
-logEval.names = [
+export const logEvalNames = [
     'log-eval',
 ];
 
-logEval.injections = [hit];
+// eslint-disable-next-line prefer-destructuring
+logEval.primaryName = logEvalNames[0];
+
+logEval.injections = [hit, logMessage];

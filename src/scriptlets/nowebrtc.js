@@ -2,6 +2,7 @@
 import {
     hit,
     noopFunc,
+    logMessage,
     convertRtcConfigToString,
 } from '../helpers';
 
@@ -10,15 +11,19 @@ import {
  * @scriptlet nowebrtc
  *
  * @description
- * Disables WebRTC by overriding `RTCPeerConnection`. The overridden function will log every attempt to create a new connection.
+ * Disables WebRTC by overriding `RTCPeerConnection`.
+ * The overridden function will log every attempt to create a new connection.
  *
  * Related UBO scriptlet:
  * https://github.com/gorhill/uBlock/wiki/Resources-Library#nowebrtcjs-
  *
- * **Syntax**
- * ```
+ * ### Syntax
+ *
+ * ```adblock
  * example.org#%#//scriptlet('nowebrtc')
  * ```
+ *
+ * @added v1.0.4.
  */
 /* eslint-enable max-len */
 export function nowebrtc(source) {
@@ -35,7 +40,9 @@ export function nowebrtc(source) {
 
     const rtcReplacement = (config) => {
         // eslint-disable-next-line max-len
-        hit(source, `Document tried to create an RTCPeerConnection: ${convertRtcConfigToString(config)}`);
+        const message = `Document tried to create an RTCPeerConnection: ${convertRtcConfigToString(config)}`;
+        logMessage(source, message);
+        hit(source);
     };
     rtcReplacement.prototype = {
         close: noopFunc,
@@ -55,7 +62,7 @@ export function nowebrtc(source) {
     }
 }
 
-nowebrtc.names = [
+export const nowebrtcNames = [
     'nowebrtc',
     // aliases are needed for matching the related scriptlet converted into our syntax
     'nowebrtc.js',
@@ -63,8 +70,12 @@ nowebrtc.names = [
     'ubo-nowebrtc',
 ];
 
+// eslint-disable-next-line prefer-destructuring
+nowebrtc.primaryName = nowebrtcNames[0];
+
 nowebrtc.injections = [
     hit,
     noopFunc,
+    logMessage,
     convertRtcConfigToString,
 ];

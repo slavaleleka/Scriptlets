@@ -1,5 +1,5 @@
 /* eslint-disable no-eval, no-extra-bind */
-import { hit } from '../helpers';
+import { hit, logMessage } from '../helpers';
 
 /**
  * @scriptlet noeval
@@ -14,18 +14,22 @@ import { hit } from '../helpers';
  * It also can be used as `$redirect` rules sometimes.
  * See [redirect description](../wiki/about-redirects.md#noeval).
  *
- * **Syntax**
- * ```
+ * ### Syntax
+ *
+ * ```adblock
  * example.org#%#//scriptlet('noeval')
  * ```
+ *
+ * @added v1.0.4.
  */
 export function noeval(source) {
     window.eval = function evalWrapper(s) {
-        hit(source, `AdGuard has prevented eval:\n${s}`);
+        hit(source);
+        logMessage(source, `AdGuard has prevented eval:\n${s}`, true);
     }.bind();
 }
 
-noeval.names = [
+export const noevalNames = [
     'noeval',
     // aliases are needed for matching the related scriptlet converted into our syntax
     'noeval.js',
@@ -36,4 +40,7 @@ noeval.names = [
     'ubo-silent-noeval',
 ];
 
-noeval.injections = [hit];
+// eslint-disable-next-line prefer-destructuring
+noeval.primaryName = noevalNames[0];
+
+noeval.injections = [hit, logMessage];

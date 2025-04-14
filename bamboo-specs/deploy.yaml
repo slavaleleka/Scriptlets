@@ -4,18 +4,26 @@ deployment:
   name: scriptlets - deploy
   source-plan: AJL-SCRIPTLETSBUILD
 release-naming: ${bamboo.inject.version}
+
 environments:
   - npmjs
+  - npmjs • alpha
+  - npmjs • beta
 
-npmjs:
+npmjs: &npmjs
   docker:
-    image: adguard/node-ssh:15.14--6
+    image: adguard/node-ssh:22.14--0
     volumes:
-      ${system.YARN_DIR}: "${bamboo.cacheYarn}"
+      ${system.PNPM_DIR}: "${bamboo.cachePnpm}"
+  variables: &npmjs-variables
+    publishArgs: --access public
   triggers: [ ]
   tasks:
     - checkout:
-        force-clean-build: 'true'
+        force-clean-build: true
+    - artifact-download:
+        artifacts:
+          - name: scriptlets.tgz
     - script:
         interpreter: SHELL
         scripts:
@@ -26,9 +34,14 @@ npmjs:
 
             export NPM_TOKEN=${bamboo.npmSecretToken}
             echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
-            yarn install ${bamboo.varsYarn}
-            npm publish --access public
-            rm -rf node_modules
+
+            npm publish scriptlets.tgz ${bamboo_publishArgs}
+    - any-task:
+        plugin-key: com.atlassian.bamboo.plugins.vcs:task.vcs.tagging
+        configuration:
+          # This ID is visible on the page with linked repositories. Ask the admin to provide it to you.
+          selectedRepository: '26050988'
+          tagName: v${bamboo.inject.version}
   requirements:
     - adg-docker: 'true'
   notifications:
@@ -38,3 +51,15 @@ npmjs:
         - webhook:
             name: Deploy webhook
             url: http://prod.jirahub.service.eu.consul/v1/webhook/bamboo
+
+npmjs • alpha:
+  <<: *npmjs
+  variables:
+    <<: *npmjs-variables
+    publishArgs: --tag alpha --access public
+
+npmjs • beta:
+  <<: *npmjs
+  variables:
+    <<: *npmjs-variables
+    publishArgs: --tag beta --access public

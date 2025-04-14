@@ -1,7 +1,6 @@
 /* eslint-disable no-underscore-dangle */
 
 import { runScriptlet, clearGlobalProps } from '../helpers';
-import { endsWith } from '../../src/helpers/string-utils';
 
 const { test, module } = QUnit;
 const name = 'nowebrtc';
@@ -29,7 +28,6 @@ const testPeerConfig = {
     iceServers: [testServerConfig],
 };
 
-// eslint-disable-next-line compat/compat
 const isSupported = typeof window.RTCPeerConnection !== 'undefined';
 
 if (!isSupported) {
@@ -58,7 +56,7 @@ if (!isSupported) {
     test('RTCPeerConnection without config', (assert) => {
         runScriptlet(name);
 
-        const localConnection = new RTCPeerConnection(); // eslint-disable-line compat/compat
+        const localConnection = new RTCPeerConnection();
         const sendChannel = localConnection.createDataChannel('sendChannel');
 
         assert.strictEqual(window.hit, 'FIRED');
@@ -68,7 +66,7 @@ if (!isSupported) {
     test('RTCPeerConnection with config', (assert) => {
         runScriptlet(name);
 
-        const testPeer = new RTCPeerConnection(testPeerConfig); // eslint-disable-line compat/compat
+        const testPeer = new RTCPeerConnection(testPeerConfig);
         const dataChannel = testPeer.createDataChannel('', {
             reliable: true,
         });
@@ -84,17 +82,17 @@ if (!isSupported) {
         // mock console.log function for log checking
         // eslint-disable-next-line no-console
         console.log = function log(input) {
-            if (input.indexOf('trace') > -1) {
+            if (input.includes('trace')) {
                 return;
             }
-            // eslint-disable-next-line max-len
-            const EXPECTED_LOG_STR = `Document tried to create an RTCPeerConnection: ${TEST_URL_VALUE}`;
-            assert.ok(endsWith(input, EXPECTED_LOG_STR), 'console.hit input');
+
+            const EXPECTED_LOG_STR = `${name}: Document tried to create an RTCPeerConnection: ${TEST_URL_VALUE}`;
+            assert.ok(input.endsWith(EXPECTED_LOG_STR), 'console.hit input');
         };
 
         runScriptlet(name);
 
-        // eslint-disable-next-line no-unused-vars, compat/compat
+        // eslint-disable-next-line no-unused-vars
         const testPeer = new RTCPeerConnection(testPeerConfig);
 
         assert.strictEqual(window.hit, 'FIRED', 'hit fired');

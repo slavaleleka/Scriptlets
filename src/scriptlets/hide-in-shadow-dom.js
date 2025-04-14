@@ -1,9 +1,10 @@
 import {
     hit,
     observeDOMChanges,
-    flatten,
     findHostElements,
     pierceShadowDom,
+    flatten,
+    throttle,
 } from '../helpers';
 
 /**
@@ -12,26 +13,30 @@ import {
  * @description
  * Hides elements inside open shadow DOM elements.
  *
- * **Syntax**
- * ```
+ * ### Syntax
+ *
+ * ```text
  * example.org#%#//scriptlet('hide-in-shadow-dom', selector[, baseSelector])
  * ```
  *
  * - `selector` — required, CSS selector of element in shadow-dom to hide
  * - `baseSelector` — optional, selector of specific page DOM element,
- * narrows down the part of the page DOM where shadow-dom host supposed to be,
- * defaults to document.documentElement
+ *   narrows down the part of the page DOM where shadow-dom host supposed to be,
+ *   defaults to document.documentElement
  *
- * > `baseSelector` should match element of the page DOM, but not of shadow DOM
+ * > `baseSelector` should match element of the page DOM, but not of shadow DOM.
  *
- * **Examples**
- * ```
+ * ### Examples
+ *
+ * ```adblock
  * ! hides menu bar
- * virustotal.com#%#//scriptlet('hide-in-shadow-dom', 'iron-pages', 'vt-virustotal-app')
+ * example.com#%#//scriptlet('hide-in-shadow-dom', '.storyAd', '#app')
  *
  * ! hides floating element
- * virustotal.com#%#//scriptlet('hide-in-shadow-dom', 'vt-ui-contact-fab')
+ * example.com#%#//scriptlet('hide-in-shadow-dom', '.contact-fab')
  * ```
+ *
+ * @added v1.3.0.
  */
 export function hideInShadowDom(source, selector, baseSelector) {
     // do nothing if browser does not support ShadowRoot
@@ -78,14 +83,20 @@ export function hideInShadowDom(source, selector, baseSelector) {
     observeDOMChanges(hideHandler, true);
 }
 
-hideInShadowDom.names = [
+export const hideInShadowDomNames = [
     'hide-in-shadow-dom',
 ];
+
+// eslint-disable-next-line prefer-destructuring
+hideInShadowDom.primaryName = hideInShadowDomNames[0];
 
 hideInShadowDom.injections = [
     hit,
     observeDOMChanges,
-    flatten,
     findHostElements,
     pierceShadowDom,
+    // following helpers should be imported and injected
+    // because they are used by helpers above
+    flatten,
+    throttle,
 ];

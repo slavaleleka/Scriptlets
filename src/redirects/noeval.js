@@ -1,4 +1,4 @@
-import { noeval } from '../scriptlets/noeval';
+import { noeval, noevalNames } from '../scriptlets/noeval';
 
 /**
  * @redirect noeval
@@ -15,9 +15,12 @@ import { noeval } from '../scriptlets/noeval';
  * Related UBO redirect resource:
  * https://github.com/gorhill/uBlock/wiki/Resources-Library#noeval-silentjs-
  *
- * **Example**
- * ```
+ * ### Examples
+ *
+ * ```adblock
  * ||example.org/index.js$script,redirect=noeval
  * ```
+ *
+ * @added v1.0.4.
  */
-export { noeval };
+export { noeval, noevalNames };

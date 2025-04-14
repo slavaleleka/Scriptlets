@@ -1,4 +1,4 @@
-import { hit, noopFunc } from '../helpers';
+import { hit, noopFunc, noopArray } from '../helpers';
 
 /**
  * @redirect metrika-yandex-watch
@@ -7,17 +7,21 @@ import { hit, noopFunc } from '../helpers';
  * Mocks the old Yandex Metrika API.
  * https://yandex.ru/support/metrica/objects/_method-reference.html
  *
- * **Example**
- * ```
+ * ### Examples
+ *
+ * ```adblock
  * ||mc.yandex.ru/metrika/watch.js$script,redirect=metrika-yandex-watch
  * ```
+ *
+ * @added v1.0.10.
  */
 export function metrikaYandexWatch(source) {
     const cbName = 'yandex_metrika_callbacks';
 
     /**
      * Gets callback and its context from options and call it in async way
-     * @param {Object} options Yandex Metrika API options
+     *
+     * @param {object} options Yandex Metrika API options
      */
     const asyncCallbackFromOptions = (options = {}) => {
         let { callback } = options;
@@ -29,13 +33,14 @@ export function metrikaYandexWatch(source) {
     };
 
     function Metrika() { } // constructor
-
+    Metrika.counters = noopArray;
     // Methods without options
     Metrika.prototype.addFileExtension = noopFunc;
     Metrika.prototype.getClientID = noopFunc;
     Metrika.prototype.setUserID = noopFunc;
     Metrika.prototype.userParams = noopFunc;
     Metrika.prototype.params = noopFunc;
+    Metrika.prototype.counters = noopArray;
 
     // Methods with options
     // The order of arguments should be kept in according to API
@@ -70,8 +75,11 @@ export function metrikaYandexWatch(source) {
     hit(source);
 }
 
-metrikaYandexWatch.names = [
+export const metrikaYandexWatchNames = [
     'metrika-yandex-watch',
 ];
 
-metrikaYandexWatch.injections = [hit, noopFunc];
+// eslint-disable-next-line prefer-destructuring
+metrikaYandexWatch.primaryName = metrikaYandexWatchNames[0];
+
+metrikaYandexWatch.injections = [hit, noopFunc, noopArray];

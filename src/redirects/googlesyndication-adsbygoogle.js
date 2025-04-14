@@ -8,12 +8,15 @@ import { hit } from '../helpers';
  * Mocks Google AdSense API.
  *
  * Related UBO redirect resource:
- * https://github.com/gorhill/uBlock/blob/a94df7f3b27080ae2dcb3b914ace39c0c294d2f6/src/web_accessible_resources/googlesyndication_adsbygoogle.js
+ * https://github.com/gorhill/uBlock/blob/master/src/web_accessible_resources/googlesyndication_adsbygoogle.js
  *
- * **Example**
- * ```
+ * ### Examples
+ *
+ * ```adblock
  * ||pagead2.googlesyndication.com/pagead/js/adsbygoogle.js$script,redirect=googlesyndication-adsbygoogle
  * ```
+ *
+ * @added v1.0.10.
  */
 /* eslint-enable max-len */
 export function GoogleSyndicationAdsByGoogle(source) {
@@ -21,10 +24,25 @@ export function GoogleSyndicationAdsByGoogle(source) {
         // https://github.com/AdguardTeam/Scriptlets/issues/113
         // length: 0,
         loaded: true,
-        push() {
+        // https://github.com/AdguardTeam/Scriptlets/issues/184
+        push(arg) {
             if (typeof this.length === 'undefined') {
                 this.length = 0;
                 this.length += 1;
+            }
+            if (arg !== null && arg instanceof Object && arg.constructor.name === 'Object') {
+                // eslint-disable-next-line no-restricted-syntax
+                for (const key of Object.keys(arg)) {
+                    if (typeof arg[key] === 'function') {
+                        try {
+                            // https://github.com/AdguardTeam/Scriptlets/issues/252
+                            // argument "{}" is needed to fix issue with undefined argument
+                            arg[key].call(this, {});
+                        } catch {
+                            /* empty */
+                        }
+                    }
+                }
             }
         },
     };
@@ -47,10 +65,10 @@ export function GoogleSyndicationAdsByGoogle(source) {
             areIframesDefined = childNodesQuantity === 2
                 // the first of child nodes should be aswift iframe
                 && adElemChildNodes[0].nodeName.toLowerCase() === 'iframe'
-                && adElemChildNodes[0].id.indexOf(ASWIFT_IFRAME_MARKER) > -1
+                && adElemChildNodes[0].id.includes(ASWIFT_IFRAME_MARKER)
                 // the second of child nodes should be google_ads iframe
                 && adElemChildNodes[1].nodeName.toLowerCase() === 'iframe'
-                && adElemChildNodes[1].id.indexOf(GOOGLE_ADS_IFRAME_MARKER) > -1;
+                && adElemChildNodes[1].id.includes(GOOGLE_ADS_IFRAME_MARKER);
         }
 
         if (!areIframesDefined) {
@@ -80,11 +98,14 @@ export function GoogleSyndicationAdsByGoogle(source) {
     }
 }
 
-GoogleSyndicationAdsByGoogle.names = [
+export const GoogleSyndicationAdsByGoogleNames = [
     'googlesyndication-adsbygoogle',
     'ubo-googlesyndication_adsbygoogle.js',
     'googlesyndication_adsbygoogle.js',
 ];
+
+// eslint-disable-next-line prefer-destructuring
+GoogleSyndicationAdsByGoogle.primaryName = GoogleSyndicationAdsByGoogleNames[0];
 
 GoogleSyndicationAdsByGoogle.injections = [
     hit,

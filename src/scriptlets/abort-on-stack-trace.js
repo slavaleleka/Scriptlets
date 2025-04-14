@@ -4,10 +4,17 @@ import {
     getPropertyInChain,
     createOnErrorHandler,
     hit,
-    validateStrPattern,
+    isValidStrPattern,
     matchStackTrace,
-    // following helpers are needed for helpers above
+    getDescriptorAddon,
+    logMessage,
+    shouldAbortInlineOrInjectedScript,
+    escapeRegExp,
     toRegExp,
+    isEmptyObject,
+    getNativeRegexpTest,
+    backupRegExpValues,
+    restoreRegExpValues,
 } from '../helpers';
 
 /* eslint-disable max-len */
@@ -15,31 +22,58 @@ import {
  * @scriptlet abort-on-stack-trace
  *
  * @description
- * Aborts a script when it attempts to utilize (read or write to) the specified property and it's error stack trace contains given value.
+ * Aborts a script when it attempts to utilize (read or write to) the specified property
+ * and it's error stack trace contains given value.
  *
  * Related UBO scriptlet:
  * https://github.com/gorhill/uBlock-for-firefox-legacy/commit/7099186ae54e70b588d5e99554a05d783cabc8ff
  *
- * **Syntax**
- * ```
+ * ### Syntax
+ *
+ * ```text
  * example.com#%#//scriptlet('abort-on-stack-trace', property, stack)
  * ```
  *
- * - `property` - required, path to a property. The property must be attached to window.
- * - `stack` - required, string that must match the current function call stack trace.
+ * - `property` — required, path to a property. The property must be attached to window.
+ * - `stack` — required, string that must match the current function call stack trace.
+ *     - values to abort inline or injected script, accordingly:
+ *         - `inlineScript`
+ *         - `injectedScript`
  *
- * **Examples**
- * ```
- * ! Aborts script when it tries to access `window.Ya` and it's error stack trace contains `test.js`
- * example.org#%#//scriptlet('abort-on-stack-trace', 'Ya', 'test.js')
+ * ### Examples
  *
- * ! Aborts script when it tries to access `window.Ya.videoAd` and it's error stack trace contains `test.js`
- * example.org#%#//scriptlet('abort-on-stack-trace', 'Ya.videoAd', 'test.js')
+ * 1. Aborts script when it tries to access `window.Ya` and it's error stack trace contains `test.js`
  *
- * ! Aborts script when stack trace matches with any of these parameters
- * example.org#%#//scriptlet('abort-on-stack-trace', 'Ya', 'yandexFuncName')
- * example.org#%#//scriptlet('abort-on-stack-trace', 'Ya', 'yandexScriptName')
- * ```
+ *     ```adblock
+ *     example.org#%#//scriptlet('abort-on-stack-trace', 'Ya', 'test.js')
+ *     ```
+ *
+ * 1. Aborts script when it tries to access `window.Ya.videoAd` and it's error stack trace contains `test.js`
+ *
+ *     ```adblock
+ *     example.org#%#//scriptlet('abort-on-stack-trace', 'Ya.videoAd', 'test.js')
+ *     ```
+ *
+ * 1. Aborts script when stack trace matches with any of these parameters
+ *
+ *     ```adblock
+ *     example.org#%#//scriptlet('abort-on-stack-trace', 'Ya', 'yandexFuncName')
+ *     example.org#%#//scriptlet('abort-on-stack-trace', 'Ya', 'yandexScriptName')
+ *     ```
+ *
+ * 1. Aborts script when it tries to access `window.Ya` and it's an inline script
+ *
+ *     ```adblock
+ *     example.org#%#//scriptlet('abort-on-stack-trace', 'Ya', 'inlineScript')
+ *     ```
+ *
+ * 1. Aborts script when it tries to access `window.Ya` and it's an injected script
+ *
+ *      ```adblock
+ *      example.org#%#//scriptlet('abort-on-stack-trace', 'Ya', 'injectedScript')
+ *      ```
+ *
+ * @added v1.5.0.
  */
 /* eslint-enable max-len */
 export function abortOnStackTrace(source, property, stack) {
@@ -71,35 +105,47 @@ export function abortOnStackTrace(source, property, stack) {
             return;
         }
 
-        let value = base[prop];
-        if (!validateStrPattern(stack)) {
-            // eslint-disable-next-line no-console
-            console.log(`Invalid parameter: ${stack}`);
+        if (!stack.match(/^(inlineScript|injectedScript)$/) && !isValidStrPattern(stack)) {
+            logMessage(source, `Invalid parameter: ${stack}`);
             return;
         }
-        setPropertyAccess(base, prop, {
+
+        // Prevent infinite loops when trapping prop used by helpers in getter/setter
+        const descriptorWrapper = Object.assign(getDescriptorAddon(), {
+            value: base[prop],
             get() {
-                if (matchStackTrace(stack, new Error().stack)) {
+                if (!this.isAbortingSuspended
+                    && this.isolateCallback(matchStackTrace, stack, new Error().stack)) {
                     abort();
                 }
-                return value;
+                return this.value;
             },
             set(newValue) {
-                if (matchStackTrace(stack, new Error().stack)) {
+                if (!this.isAbortingSuspended
+                    && this.isolateCallback(matchStackTrace, stack, new Error().stack)) {
                     abort();
                 }
-                value = newValue;
+                this.value = newValue;
+            },
+        });
+
+        setPropertyAccess(base, prop, {
+            // Call wrapped getter and setter to keep isAbortingSuspended & isolateCallback values
+            get() {
+                return descriptorWrapper.get.call(descriptorWrapper);
+            },
+            set(newValue) {
+                descriptorWrapper.set.call(descriptorWrapper, newValue);
             },
         });
     };
 
     setChainPropAccess(window, property);
 
-    window.onerror = createOnErrorHandler(rid)
-        .bind();
+    window.onerror = createOnErrorHandler(rid).bind();
 }
 
-abortOnStackTrace.names = [
+export const abortOnStackTraceNames = [
     'abort-on-stack-trace',
     // aliases are needed for matching the related scriptlet converted into our syntax
     'abort-on-stack-trace.js',
@@ -110,13 +156,25 @@ abortOnStackTrace.names = [
     'ubo-aost',
     'abp-abort-on-stack-trace',
 ];
+
+// eslint-disable-next-line prefer-destructuring
+abortOnStackTrace.primaryName = abortOnStackTraceNames[0];
+
 abortOnStackTrace.injections = [
     randomId,
     setPropertyAccess,
     getPropertyInChain,
     createOnErrorHandler,
     hit,
-    validateStrPattern,
+    isValidStrPattern,
+    escapeRegExp,
     matchStackTrace,
+    getDescriptorAddon,
+    logMessage,
     toRegExp,
+    isEmptyObject,
+    getNativeRegexpTest,
+    shouldAbortInlineOrInjectedScript,
+    backupRegExpValues,
+    restoreRegExpValues,
 ];

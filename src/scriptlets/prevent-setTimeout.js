@@ -1,12 +1,19 @@
 import {
     hit,
     noopFunc,
+    isPreventionNeeded,
+    logMessage,
     parseMatchArg,
     parseDelayArg,
-    // following helpers are needed for helpers above
     toRegExp,
-    startsWith,
     nativeIsNaN,
+    isValidCallback,
+    isValidMatchStr,
+    escapeRegExp,
+    isValidStrPattern,
+    nativeIsFinite,
+    isValidMatchNumber,
+    parseRawDelay,
 } from '../helpers';
 
 /* eslint-disable max-len */
@@ -15,50 +22,61 @@ import {
  *
  * @description
  * Prevents a `setTimeout` call if:
- * 1) the text of the callback is matching the specified search string/regexp which does not start with `!`;
- * otherwise mismatched calls should be defused;
- * 2) the timeout is matching the specified delay; otherwise mismatched calls should be defused.
+ *
+ * 1. The text of the callback is matching the specified `matchCallback` string/regexp which does not start with `!`;
+ *    otherwise mismatched calls should be defused.
+ * 1. The delay is matching the specified `matchDelay`; otherwise mismatched calls should be defused.
  *
  * Related UBO scriptlet:
  * https://github.com/gorhill/uBlock/wiki/Resources-Library#no-settimeout-ifjs-
  *
- * **Syntax**
+ * ### Syntax
+ *
+ * ```text
+ * example.org#%#//scriptlet('prevent-setTimeout'[, matchCallback[, matchDelay]])
  * ```
- * example.org#%#//scriptlet('prevent-setTimeout'[, search[, delay]])
- * ```
  *
- * Call with no arguments will log calls to setTimeout while debugging (`log-setTimeout` superseding),
- * so production filter lists' rules definitely require at least one of the parameters:
- * - `search` - optional, string or regular expression; invalid regular expression will be skipped and all callbacks will be matched.
- * If starts with `!`, scriptlet will not match the stringified callback but all other will be defused.
- * If do not start with `!`, the stringified callback will be matched.
- * If not set, prevents all `setTimeout` calls due to specified `delay`.
- * - `delay` - optional, must be an integer.
- * If starts with `!`, scriptlet will not match the delay but all other will be defused.
- * If do not start with `!`, the delay passed to the `setTimeout` call will be matched.
+ * > Call with no arguments will log all setTimeout calls (`log-setTimeout` superseding),
+ * > it may be useful for debugging but it is not allowed for prod versions of filter lists.
  *
- * > If `prevent-setTimeout` without parameters logs smth like `setTimeout(undefined, 1000)`,
- * it means that no callback was passed to setTimeout() and that's not scriptlet issue
+ * - `matchCallback` — optional, string or regular expression;
+ *   invalid regular expression will be skipped and all callbacks will be matched.
+ *   If starts with `!`, scriptlet will not match the stringified callback but all other will be defused.
+ *   If do not start with `!`, the stringified callback will be matched.
+ *   If not set, prevents all `setTimeout` calls due to specified `matchDelay`.
+ * - `matchDelay` — optional, must be an integer.
+ *   If starts with `!`, scriptlet will not match the delay but all other will be defused.
+ *   If do not start with `!`, the delay passed to the `setTimeout` call will be matched.
+ *   Decimal delay values will be rounded down, e.g `10.95` will be matched by `matchDelay` with value `10`.
  *
- * **Examples**
- * 1. Prevents `setTimeout` calls if the callback matches `/\.test/` regardless of the delay.
- *     ```bash
+ * > If `prevent-setTimeout` log looks like `setTimeout(undefined, 1000)`,
+ * > it means that no callback was passed to setTimeout() and that's not scriptlet issue
+ * > and obviously it can not be matched by `matchCallback`.
+ *
+ * ### Examples
+ *
+ * 1. Prevents `setTimeout` calls if the callback matches `/\.test/` regardless of the delay
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('prevent-setTimeout', '/\.test/')
  *     ```
  *
  *     For instance, the following call will be prevented:
+ *
  *     ```javascript
  *     setTimeout(function () {
  *         window.test = "value";
  *     }, 100);
  *     ```
  *
- * 2. Prevents `setTimeout` calls if the callback does not contain `value`.
- *     ```
+ * 1. Prevents `setTimeout` calls if the callback does not contain `value`
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('prevent-setTimeout', '!value')
  *     ```
  *
  *     For instance, only the first of the following calls will be prevented:
+ *
  *     ```javascript
  *     setTimeout(function () {
  *         window.test = "test -- prevented";
@@ -71,12 +89,14 @@ import {
  *     }, 500);
  *     ```
  *
- * 3. Prevents `setTimeout` calls if the callback contains `value` and the delay is not set to `300`.
- *     ```
+ * 1. Prevents `setTimeout` calls if the callback contains `value` and the delay is not set to `300`
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('prevent-setTimeout', 'value', '!300')
  *     ```
  *
  *     For instance, only the first of the following calls will not be prevented:
+ *
  *     ```javascript
  *     setTimeout(function () {
  *         window.test = "value 1 -- executed";
@@ -89,12 +109,14 @@ import {
  *     }, 500);
  *     ```
  *
- * 4. Prevents `setTimeout` calls if the callback does not contain `value` and the delay is not set to `300`.
- *     ```
+ * 1. Prevents `setTimeout` calls if the callback does not contain `value` and the delay is not set to `300`
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('prevent-setTimeout', '!value', '!300')
  *     ```
  *
  *     For instance, only the second of the following calls will be prevented:
+ *
  *     ```javascript
  *     setTimeout(function () {
  *         window.test = "test -- executed";
@@ -109,64 +131,46 @@ import {
  *         window.value = "test -- executed";
  *     }, 500);
  *     ```
+ *
+ * 1. Prevents `setTimeout` calls if the callback contains `value` and delay is a decimal
+ *
+ *     ```adblock
+ *     example.org#%#//scriptlet('prevent-setTimeout', 'value', '300')
+ *     ```
+ *
+ *     For instance, the following calls will be prevented:
+ *
+ *     ```javascript
+ *     setTimeout(function () {
+ *         window.test = "value";
+ *     }, 300);
+ *     setTimeout(function () {
+ *         window.test = "value";
+ *     }, 300 + Math.random());
+ *     ```
+ *
+ * @added v1.0.4.
  */
 /* eslint-enable max-len */
-export function preventSetTimeout(source, match, delay) {
-    // if browser does not support Proxy (e.g. Internet Explorer),
-    // we use none-proxy "legacy" wrapper for preventing
-    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy
-    const isProxySupported = typeof Proxy !== 'undefined';
-
-    const nativeTimeout = window.setTimeout;
-    const log = console.log.bind(console); // eslint-disable-line no-console
-
+export function preventSetTimeout(source, matchCallback, matchDelay) {
     // logs setTimeouts to console if no arguments have been specified
-    const shouldLog = ((typeof match === 'undefined') && (typeof delay === 'undefined'));
-
-    const { isInvertedMatch, matchRegexp } = parseMatchArg(match);
-    const { isInvertedDelayMatch, delayMatch } = parseDelayArg(delay);
-
-    const getShouldPrevent = (callbackStr, timeout) => {
-        let shouldPrevent = false;
-        if (!delayMatch) {
-            shouldPrevent = matchRegexp.test(callbackStr) !== isInvertedMatch;
-        } else if (!match) {
-            shouldPrevent = (timeout === delayMatch) !== isInvertedDelayMatch;
-        } else {
-            shouldPrevent = matchRegexp.test(callbackStr) !== isInvertedMatch
-                && (timeout === delayMatch) !== isInvertedDelayMatch;
-        }
-        return shouldPrevent;
-    };
-
-    const legacyTimeoutWrapper = (callback, timeout, ...args) => {
-        let shouldPrevent = false;
-        // https://github.com/AdguardTeam/Scriptlets/issues/105
-        const cbString = String(callback);
-        if (shouldLog) {
-            hit(source);
-            log(`setTimeout(${cbString}, ${timeout})`);
-        } else {
-            shouldPrevent = getShouldPrevent(cbString, timeout);
-        }
-        if (shouldPrevent) {
-            hit(source);
-            return nativeTimeout(noopFunc, timeout);
-        }
-        return nativeTimeout.apply(window, [callback, timeout, ...args]);
-    };
+    const shouldLog = ((typeof matchCallback === 'undefined') && (typeof matchDelay === 'undefined'));
 
     const handlerWrapper = (target, thisArg, args) => {
         const callback = args[0];
-        const timeout = args[1];
+        const delay = args[1];
         let shouldPrevent = false;
-        // https://github.com/AdguardTeam/Scriptlets/issues/105
-        const cbString = String(callback);
         if (shouldLog) {
             hit(source);
-            log(`setTimeout(${cbString}, ${timeout})`);
+            // https://github.com/AdguardTeam/Scriptlets/issues/105
+            logMessage(source, `setTimeout(${String(callback)}, ${delay})`, true);
         } else {
-            shouldPrevent = getShouldPrevent(cbString, timeout);
+            shouldPrevent = isPreventionNeeded({
+                callback,
+                delay,
+                matchCallback,
+                matchDelay,
+            });
         }
         if (shouldPrevent) {
             hit(source);
@@ -179,12 +183,10 @@ export function preventSetTimeout(source, match, delay) {
         apply: handlerWrapper,
     };
 
-    window.setTimeout = isProxySupported
-        ? new Proxy(window.setTimeout, setTimeoutHandler)
-        : legacyTimeoutWrapper;
+    window.setTimeout = new Proxy(window.setTimeout, setTimeoutHandler);
 }
 
-preventSetTimeout.names = [
+export const preventSetTimeoutNames = [
     'prevent-setTimeout',
     // aliases are needed for matching the related scriptlet converted into our syntax
     'no-setTimeout-if.js', // new implementation of setTimeout-defuser.js
@@ -204,12 +206,24 @@ preventSetTimeout.names = [
     'ubo-std',
 ];
 
+// eslint-disable-next-line prefer-destructuring
+preventSetTimeout.primaryName = preventSetTimeoutNames[0];
+
 preventSetTimeout.injections = [
     hit,
     noopFunc,
+    isPreventionNeeded,
+    logMessage,
+    // following helpers should be injected as helpers above use them
     parseMatchArg,
     parseDelayArg,
     toRegExp,
-    startsWith,
     nativeIsNaN,
+    isValidCallback,
+    isValidMatchStr,
+    escapeRegExp,
+    isValidStrPattern,
+    nativeIsFinite,
+    isValidMatchNumber,
+    parseRawDelay,
 ];

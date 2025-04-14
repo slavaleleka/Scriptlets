@@ -2,10 +2,11 @@ import {
     hit,
     noopFunc,
     parseMatchArg,
-    validateStrPattern,
-    // following helpers are needed for helpers above
+    isValidStrPattern,
+    isValidCallback,
+    logMessage,
+    escapeRegExp,
     toRegExp,
-    startsWith,
 } from '../helpers';
 
 /* eslint-disable max-len */
@@ -20,25 +21,30 @@ import {
  * Related UBO scriptlet:
  * https://github.com/gorhill/uBlock/wiki/Resources-Library#no-requestanimationframe-ifjs-
  *
- * **Syntax**
- * ```
+ * ### Syntax
+ *
+ * ```text
  * example.org#%#//scriptlet('prevent-requestAnimationFrame'[, search])
  * ```
  *
- * - `search` - optional, string or regular expression; invalid regular expression will be skipped and all callbacks will be matched.
- * If starts with `!`, scriptlet will not match the stringified callback but all other will be defused.
- * If do not start with `!`, the stringified callback will be matched.
+ * - `search` — optional, string or regular expression;
+ *   invalid regular expression will be skipped and all callbacks will be matched.
+ *   If starts with `!`, scriptlet will not match the stringified callback but all other will be defused.
+ *   If do not start with `!`, the stringified callback will be matched.
  *
- * Call with no argument will log all requestAnimationFrame calls while debugging.
- * So do not use the scriptlet without any parameter in production filter lists.
+ * > Call with no argument will log all requestAnimationFrame calls,
+ * > it may be useful for debugging but it is not allowed for prod versions of filter lists.
  *
- * **Examples**
- * 1. Prevents `requestAnimationFrame` calls if the callback matches `/\.test/`.
- *     ```bash
+ * ### Examples
+ *
+ * 1. Prevents `requestAnimationFrame` calls if the callback matches `/\.test/`
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('prevent-requestAnimationFrame', '/\.test/')
  *     ```
  *
  *     For instance, the following call will be prevented:
+ *
  *     ```javascript
  *     var times = 0;
  *     requestAnimationFrame(function change() {
@@ -49,8 +55,10 @@ import {
  *         }
  *     });
  *     ```
- * 2. Prevents `requestAnimationFrame` calls if **does not match** 'check'.
- *     ```bash
+ *
+ * 1. Prevents `requestAnimationFrame` calls if **does not match** 'check'
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('prevent-requestAnimationFrame', '!check')
  *     ```
  *
@@ -75,6 +83,8 @@ import {
  *         }
  *     });
  *     ```
+ *
+ * @added v1.1.15.
  */
 /* eslint-enable max-len */
 
@@ -89,9 +99,9 @@ export function preventRequestAnimationFrame(source, match) {
     const rafWrapper = (callback, ...args) => {
         let shouldPrevent = false;
         if (shouldLog) {
-            const logMessage = `log: requestAnimationFrame("${callback.toString()}")`;
-            hit(source, logMessage);
-        } else if (validateStrPattern(match)) {
+            hit(source);
+            logMessage(source, `requestAnimationFrame(${String(callback)})`, true);
+        } else if (isValidCallback(callback) && isValidStrPattern(match)) {
             shouldPrevent = matchRegexp.test(callback.toString()) !== isInvertedMatch;
         }
 
@@ -106,7 +116,7 @@ export function preventRequestAnimationFrame(source, match) {
     window.requestAnimationFrame = rafWrapper;
 }
 
-preventRequestAnimationFrame.names = [
+export const preventRequestAnimationFrameNames = [
     'prevent-requestAnimationFrame',
     // aliases are needed for matching the related scriptlet converted into our syntax
     'no-requestAnimationFrame-if.js',
@@ -117,11 +127,17 @@ preventRequestAnimationFrame.names = [
     'ubo-norafif',
 ];
 
+// eslint-disable-next-line prefer-destructuring
+preventRequestAnimationFrame.primaryName = preventRequestAnimationFrameNames[0];
+
 preventRequestAnimationFrame.injections = [
     hit,
     noopFunc,
     parseMatchArg,
-    validateStrPattern,
+    isValidStrPattern,
+    isValidCallback,
+    logMessage,
+    // following helpers should be injected as helpers above use them
+    escapeRegExp,
     toRegExp,
-    startsWith,
 ];

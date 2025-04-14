@@ -3,9 +3,11 @@
 # add ";base64" into contentType if your source already in base64
 
 - title: 1x1-transparent.gif
+  added: v1.0.4
   description: |-
-    **Example**
-    ```
+    ### Examples
+
+    ```adblock
     ||example.org^$image,redirect=1x1-transparent.gif
     ```
   aliases:
@@ -17,9 +19,11 @@
   content: R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==
 
 - title: 2x2-transparent.png
+  added: v1.0.4
   description: |-
-    **Example**
-    ```
+    ### Examples
+
+    ```adblock
     ||example.org^$image,redirect=2x2-transparent.png
     ```
   aliases:
@@ -32,9 +36,11 @@
     SUVORK5CYII=
 
 - title: 3x2-transparent.png
+  added: v1.0.4
   description: |-
-    **Example**
-    ```
+    ### Examples
+
+    ```adblock
     ||example.org^$image,redirect=3x2-transparent.png
     ```
   aliases:
@@ -47,9 +53,11 @@
     SUVORK5CYII=
 
 - title: 32x32-transparent.png
+  added: v1.0.4
   description: |-
-    **Example**
-    ```
+    ### Examples
+
+    ```adblock
     ||example.org^$image,redirect=32x32-transparent.png
     ```
   aliases:
@@ -62,9 +70,11 @@
     AO8GECAAAZf3V9cAAAAASUVORK5CYII=
 
 - title: noopframe
+  added: v1.0.4
   description: |-
-    **Example**
-    ```
+    ### Examples
+
+    ```adblock
     ||example.com^$subdocument,redirect=noopframe,domain=example.org
     ```
   aliases:
@@ -80,21 +90,26 @@
     </html>
 
 - title: noopcss
+  added: v1.0.4
   description: |-
-    **Example**
-    ```
+    ### Examples
+
+    ```adblock
     ||example.org/style.css$stylesheet,redirect=noopcss
     ```
   aliases:
+    - noop.css
     - blank-css
   file: noopcss.css
   contentType: text/css
   content: ''
 
 - title: noopjs
+  added: v1.0.4
   description: |-
-    **Example**
-    ```
+    ### Examples
+
+    ```adblock
     ||example.org/advert.js$script,redirect=noopjs
     ```
   aliases:
@@ -104,10 +119,26 @@
   contentType: application/javascript
   content: (function() {})()
 
-- title: nooptext
+- title: noopjson
+  added: v1.6.2
   description: |-
-    **Example**
+    ### Examples
+
+    ```adblock
+    ||example.org/geo/location$xmlhttprequest,redirect=noopjson
     ```
+  aliases:
+    - noop.json
+  file: noopjson.json
+  contentType: application/json
+  content: '{}'
+
+- title: nooptext
+  added: v1.0.4
+  description: |-
+    ### Examples
+
+    ```adblock
     ||example.org/advert.js$xmlhttprequest,redirect=nooptext
     ```
   aliases:
@@ -118,11 +149,14 @@
   content: ''
 
 - title: empty
+  added: v1.3.9
   description: |-
-    Pretty much the same as `nooptext`. Used for conversion of modifier `empty` so better avoid its using in production filter lists.
+    Pretty much the same as `nooptext`. Used for conversion of modifier `empty`
+    so better avoid its using in prod versions of filter lists.
 
-    **Example**
-    ```
+    ### Examples
+
+    ```adblock
     ||example.org/log$redirect=empty
     ```
   aliases:
@@ -132,59 +166,78 @@
   content: ''
 
 - title: noopvmap-1.0
+  added: v1.1.5
   description: |-
     Redirects request to an empty VMAP response.
 
-    **Example**
-    ```
+    ### Examples
+
+    ```adblock
     ||example.org/vmap01.xml$xmlhttprequest,redirect=noopvmap-1.0
     ```
   aliases:
+    # ubo redirect name
+    - noop-vmap1.xml
+    # old ubo redirect name for backward compatibility
     - noop-vmap1.0.xml
   file: noopvmap01.xml
   contentType: text/xml
   content: <vmap:VMAP xmlns:vmap="http://www.iab.net/videosuite/vmap" version="1.0"></vmap:VMAP>
 
 - title: noopvast-2.0
+  added: v1.0.10
   description: |-
     Redirects request to an empty VAST 2.0 response.
 
-    **Example**
-    ```
+    ### Examples
+
+    ```adblock
     ||example.org/vast02.xml^$xmlhttprequest,redirect=noopvast-2.0
     ```
+  aliases:
+    - noop-vast2.xml
   file: noopvast02.xml
   contentType: text/xml
   content: <VAST version="2.0"></VAST>
 
 - title: noopvast-3.0
+  added: v1.0.10
   description: |-
     Redirects request to an empty VAST 3.0 response.
 
-    **Example**
-    ```
+    ### Examples
+
+    ```adblock
     ||example.org/vast03.xml^$xmlhttprequest,redirect=noopvast-3.0
     ```
+  aliases:
+    - noop-vast3.xml
   file: noopvast03.xml
   contentType: text/xml
   content: <VAST version="3.0"></VAST>
 
 - title: noopvast-4.0
+  added: v1.4.3
   description: |-
     Redirects request to an empty VAST 4.0 response.
 
-    **Example**
-    ```
+    ### Examples
+
+    ```adblock
     ||example.org/vast04.xml^$xmlhttprequest,redirect=noopvast-4.0
     ```
+  aliases:
+    - noop-vast4.xml
   file: noopvast04.xml
   contentType: text/xml
   content: <VAST version="4.0"></VAST>
 
 - title: noopmp3-0.1s
+  added: v1.0.4
   description: |-
-    **Example**
-    ```
+    ### Examples
+
+    ```adblock
     ||example.org/advert.mp3$media,redirect=noopmp3-0.1s
     ```
   aliases:
@@ -213,9 +266,11 @@
     VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
 
 - title: noopmp4-1s
+  added: v1.0.4
   description: |-
-    **Example**
-    ```
+    ### Examples
+
+    ```adblock
     ||example.org/advert.mp4$media,redirect=noopmp4-1s
     ```
   aliases:
@@ -289,4 +344,3 @@
     AATYAAAE9AAABRAAAAUjAAAFPwAABVIAAAVuAAAFgQAABZ0AAAWwAAAFzAAABegAAAX7AAAGFwAAAGJ1
     ZHRhAAAAWm1ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAALWlsc3QAAAAl
     qXRvbwAAAB1kYXRhAAAAAQAAAABMYXZmNTUuMzMuMTAw
-

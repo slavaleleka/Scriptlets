@@ -13,10 +13,13 @@ import { hit } from '../helpers';
  * It also can be used as `$redirect` sometimes.
  * See [redirect description](../wiki/about-redirects.md#prevent-bab).
  *
- * **Syntax**
- * ```
+ * ### Syntax
+ *
+ * ```adblock
  * example.org#%#//scriptlet('prevent-bab')
  * ```
+ *
+ * @added v1.0.4.
  */
 export function preventBab(source) {
     const nativeSetTimeout = window.setTimeout;
@@ -34,7 +37,23 @@ export function preventBab(source) {
         ['blockadblock'],
         ['babasbm'],
         [/getItem\('babn'\)/],
-        ['getElementById', 'String.fromCharCode', 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', 'charAt', 'DOMContentLoaded', 'AdBlock', 'addEventListener', 'doScroll', 'fromCharCode', '<<2|r>>4', 'sessionStorage', 'clientWidth', 'localStorage', 'Math', 'random'],
+        [
+            'getElementById',
+            'String.fromCharCode',
+            'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',
+            'charAt',
+            'DOMContentLoaded',
+            'AdBlock',
+            'addEventListener',
+            'doScroll',
+            'fromCharCode',
+            '<<2|r>>4',
+            'sessionStorage',
+            'clientWidth',
+            'localStorage',
+            'Math',
+            'random',
+        ],
     ];
     const check = (str) => {
         if (typeof str !== 'string') {
@@ -45,7 +64,7 @@ export function preventBab(source) {
             let match = 0;
             for (let j = 0; j < tokens.length; j += 1) {
                 const token = tokens[j];
-                const found = token instanceof RegExp ? token.test(str) : str.indexOf(token) > -1;
+                const found = token instanceof RegExp ? token.test(str) : str.includes(token);
                 if (found) {
                     match += 1;
                 }
@@ -74,17 +93,15 @@ export function preventBab(source) {
         }
     };
     window.eval = evalWrapper.bind(window);
+    window.eval.toString = nativeEval.toString.bind(nativeEval);
 }
 
-preventBab.names = [
+export const preventBabNames = [
     'prevent-bab',
-    // aliases are needed for matching the related scriptlet converted into our syntax
-    'nobab.js',
-    'ubo-nobab.js',
-    'bab-defuser.js',
-    'ubo-bab-defuser.js',
-    'ubo-nobab',
-    'ubo-bab-defuser',
+    // there are no aliases for this scriptlet
 ];
+
+// eslint-disable-next-line prefer-destructuring
+preventBab.primaryName = preventBabNames[0];
 
 preventBab.injections = [hit];

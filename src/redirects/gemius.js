@@ -8,10 +8,13 @@ import { hit, noopFunc } from '../helpers';
  * Mocks Gemius Analytics.
  * https://flowplayer.com/developers/plugins/gemius
  *
- * **Example**
+ * ### Examples
+ *
+ * ```adblock
+ * ||example.org/gplayer.js$script,redirect=gemius
  * ```
- * ||gapt.hit.gemius.pl/gplayer.js$script,redirect=gemius
- * ```
+ *
+ * @added v1.5.0.
  */
 export function Gemius(source) {
     const GemiusPlayer = function () {};
@@ -28,8 +31,11 @@ export function Gemius(source) {
     hit(source);
 }
 
-Gemius.names = [
+export const GemiusNames = [
     'gemius',
 ];
+
+// eslint-disable-next-line prefer-destructuring
+Gemius.primaryName = GemiusNames[0];
 
 Gemius.injections = [hit, noopFunc];

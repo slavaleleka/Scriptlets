@@ -1,13 +1,13 @@
 import {
     hit,
+    isValidCallback,
     toRegExp,
     getBoostMultiplier,
     isDelayMatched,
-    // following helpers are needed for helpers above
+    logMessage,
     nativeIsNaN,
     nativeIsFinite,
     getMatchDelay,
-    getWildcardSymbol,
     shouldMatchAnyDelay,
 } from '../helpers';
 
@@ -16,85 +16,117 @@ import {
  * @scriptlet adjust-setInterval
  *
  * @description
- * Adjusts interval for specified setInterval() callbacks.
+ * Adjusts delay for specified setInterval() callbacks.
  *
  * Related UBO scriptlet:
  * https://github.com/gorhill/uBlock/wiki/Resources-Library#nano-setinterval-boosterjs-
  *
- * **Syntax**
- * ```
- * example.org#%#//scriptlet('adjust-setInterval'[, match [, interval[, boost]]])
+ * ### Syntax
+ *
+ * ```text
+ * example.org#%#//scriptlet('adjust-setInterval'[, matchCallback [, matchDelay[, boost]]])
  * ```
  *
- * - `match` - optional, string or regular expression for stringified callback matching;
- * defaults to match all callbacks; invalid regular expression will cause exit and rule will not work
- * - `interval` - optional, defaults to 1000, matching setInterval delay; decimal integer OR '*' for any delay
- * - `boost` - optional, default to 0.05, float, capped at 50 times for up and down (0.02...50), interval multiplier
+ * - `matchCallback` — optional, string or regular expression for stringified callback matching;
+ *   defaults to match all callbacks; invalid regular expression will cause exit and rule will not work
+ * - `matchDelay` — optional, defaults to 1000, matching setInterval delay; decimal integer OR '*' for any delay
+ * - `boost` — optional, default to 0.05, float,
+ *   capped at 1000 times for up and 50 for down (0.001...50), setInterval delay multiplier
  *
- * **Examples**
- * 1. Adjust all setInterval() x20 times where interval equal 1000ms:
- *     ```
+ * ### Examples
+ *
+ * 1. Adjust all setInterval() x20 times where delay equal 1000ms
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('adjust-setInterval')
  *     ```
  *
- * 2. Adjust all setInterval() x20 times where callback matched with `example` and interval equal 1000ms
- *     ```
+ * 1. Adjust all setInterval() x20 times where callback matched with `example` and delay equal 1000ms
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('adjust-setInterval', 'example')
  *     ```
  *
- * 3. Adjust all setInterval() x20 times where callback matched with `example` and interval equal 400ms
- *     ```
+ * 1. Adjust all setInterval() x20 times where callback matched with `example` and delay equal 400ms
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('adjust-setInterval', 'example', '400')
  *     ```
  *
- * 4. Slow down setInterval() x2 times where callback matched with `example` and interval equal 1000ms
- *     ```
+ * 1. Slow down setInterval() x2 times where callback matched with `example` and delay equal 1000ms
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('adjust-setInterval', 'example', '', '2')
  *     ```
- * 5. Adjust all setInterval() x50 times where interval equal 2000ms
- *     ```
+ *
+ * 1. Adjust all setInterval() x50 times where delay equal 2000ms
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('adjust-setInterval', '', '2000', '0.02')
  *     ```
- * 6. Adjust all setInterval() x50 times where interval is randomized
+ *
+ * 1. Adjust all setInterval() x1000 times where delay equal 2000ms
+ *
+ *     ```adblock
+ *     example.org#%#//scriptlet('adjust-setInterval', '', '2000', '0.001')
  *     ```
+ *
+ * 1. Adjust all setInterval() x50 times where delay is randomized
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('adjust-setInterval', '', '*', '0.02')
  *     ```
+ *
+ * @added v1.0.4.
  */
 /* eslint-enable max-len */
-export function adjustSetInterval(source, match, interval, boost) {
+export function adjustSetInterval(source, matchCallback, matchDelay, boost) {
     const nativeSetInterval = window.setInterval;
 
-    const matchRegexp = toRegExp(match);
+    const matchRegexp = toRegExp(matchCallback);
 
-    const intervalWrapper = (cb, d, ...args) => {
-        if (matchRegexp.test(cb.toString()) && isDelayMatched(interval, d)) {
-            d *= getBoostMultiplier(boost);
+    const intervalWrapper = (callback, delay, ...args) => {
+        // https://github.com/AdguardTeam/Scriptlets/issues/221
+        if (!isValidCallback(callback)) {
+            // eslint-disable-next-line max-len
+            const message = `Scriptlet can't be applied because of invalid callback: '${String(callback)}'`;
+            logMessage(source, message);
+        } else if (matchRegexp.test(callback.toString()) && isDelayMatched(matchDelay, delay)) {
+            delay *= getBoostMultiplier(boost);
             hit(source);
         }
-        return nativeSetInterval.apply(window, [cb, d, ...args]);
+        return nativeSetInterval.apply(window, [callback, delay, ...args]);
     };
     window.setInterval = intervalWrapper;
 }
 
-adjustSetInterval.names = [
+export const adjustSetIntervalNames = [
     'adjust-setInterval',
     // aliases are needed for matching the related scriptlet converted into our syntax
     'nano-setInterval-booster.js',
     'ubo-nano-setInterval-booster.js',
     'nano-sib.js',
     'ubo-nano-sib.js',
+    'adjust-setInterval.js',
+    'ubo-adjust-setInterval.js',
     'ubo-nano-setInterval-booster',
     'ubo-nano-sib',
+    'ubo-adjust-setInterval',
 ];
+
+// eslint-disable-next-line prefer-destructuring
+adjustSetInterval.primaryName = adjustSetIntervalNames[0];
 
 adjustSetInterval.injections = [
     hit,
+    isValidCallback,
     toRegExp,
     getBoostMultiplier,
     isDelayMatched,
+    logMessage,
+    // following helpers should be injected as helpers above use them
     nativeIsNaN,
     nativeIsFinite,
     getMatchDelay,
-    getWildcardSymbol,
     shouldMatchAnyDelay,
 ];

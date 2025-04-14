@@ -21,15 +21,19 @@
         },
         {
             "adg": "adjust-setInterval",
-            "ubo": "nano-setInterval-booster.js (nano-sib.js)"
+            "ubo": "adjust-setInterval.js (nano-setInterval-booster.js, nano-sib.js)"
         },
         {
             "adg": "adjust-setTimeout",
-            "ubo": "nano-setTimeout-booster.js (nano-stb.js)"
+            "ubo": "adjust-setTimeout.js (nano-setTimeout-booster.js, nano-stb.js)"
+        },
+        {
+            "adg": "call-nothrow",
+            "ubo": "call-nothrow.js"
         },
         {
             "adg": "close-window",
-            "ubo": "window-close-if.js"
+            "ubo": "close-window.js (window-close-if.js)"
         },
         {
             "adg": "debug-current-inline-script"
@@ -41,12 +45,45 @@
             "adg": "debug-on-property-write"
         },
         {
-            "adg": "dir-string",
-            "abp": "dir-string"
+            "adg": "amazon-apstag"
+        },
+        {
+            "adg": "didomi-loader"
+        },
+        {
+            "adg": "dir-string"
         },
         {
             "adg": "disable-newtab-links",
             "ubo": "disable-newtab-links.js"
+        },
+        {
+            "adg": "evaldata-prune",
+            "ubo": "evaldata-prune.js"
+        },
+        {
+            "adg": "fingerprintjs2"
+        },
+        {
+            "adg": "fingerprintjs3"
+        },
+        {
+            "adg": "gemius"
+        },
+        {
+            "adg": "google-analytics"
+        },
+        {
+            "adg": "google-analytics-ga"
+        },
+        {
+            "adg": "google-ima3"
+        },
+        {
+            "adg": "googlesyndication-adsbygoogle"
+        },
+        {
+            "adg": "googletagservices-gpt"
         },
         {
             "adg": "json-prune",
@@ -58,14 +95,26 @@
             "abp": "log"
         },
         {
-            "adg": "log-addEventListener",
-            "ubo": "addEventListener-logger.js (aell.js)"
+            "adg": "log-addEventListener"
         },
         {
             "adg": "log-eval"
         },
         {
             "adg": "log-on-stack-trace"
+        },
+        {
+            "adg": "m3u-prune",
+            "ubo": "m3u-prune.js"
+        },
+        {
+            "adg": "matomo"
+        },
+        {
+            "adg": "metrika-yandex-watch"
+        },
+        {
+            "adg": "metrika-yandex-tag"
         },
         {
             "adg": "naver-wcslog"
@@ -78,48 +127,72 @@
             "ubo": "nowebrtc.js"
         },
         {
-            "adg": "prevent-addEventListener",
-            "ubo": "addEventListener-defuser.js (aeld.js)"
+            "adg": "no-protected-audience"
         },
         {
-            "adg": "prevent-adfly",
-            "ubo": "adfly-defuser.js"
+            "adg": "no-topics"
+        },
+        {
+            "adg": "pardot-1.0"
+        },
+        {
+            "adg": "prebid"
+        },
+        {
+            "adg": "prevent-addEventListener",
+            "ubo": "addEventListener-defuser.js (aeld.js, prevent-addEventListener.js)",
+            "abp": "prevent-listener"
+        },
+        {
+            "adg": "prevent-adfly"
         },
         {
             "adg": "prevent-bab"
         },
         {
+            "adg": "prevent-canvas",
+            "ubo": "prevent-canvas.js"
+        },
+        {
+            "adg": "prevent-element-src-loading"
+        },
+        {
             "adg": "prevent-eval-if",
-            "ubo": "noeval-if.js"
+            "ubo": "noeval-if.js (prevent-eval-if.js)"
         },
         {
             "adg": "prevent-fab-3.2.0"
         },
         {
             "adg": "prevent-fetch",
-            "ubo": "no-fetch-if.js"
+            "ubo": "prevent-fetch.js (no-fetch-if.js)"
         },
         {
             "adg": "prevent-xhr",
-            "ubo": "no-xhr-if.js"
+            "ubo": "prevent-xhr.js (no-xhr-if.js)"
         },
         {
             "adg": "prevent-popads-net"
         },
         {
+            "adg": "prevent-refresh",
+            "ubo": "prevent-refresh.js (refresh-defuser.js)"
+        },
+        {
             "adg": "prevent-requestAnimationFrame",
-            "ubo": "no-requestAnimationFrame-if.js (norafif.js)"
+            "ubo": "no-requestAnimationFrame-if.js (norafif.js, prevent-requestAnimationFrame.js)"
         },
         {
             "adg": "prevent-setInterval",
-            "ubo": "no-setInterval-if.js (nosiif.js)"
+            "ubo": "no-setInterval-if.js (nosiif.js, prevent-setInterval.js, setInterval-defuser.js)"
         },
         {
             "adg": "prevent-setTimeout",
-            "ubo": "no-setTimeout-if.js (nostif.js, setTimeout-defuser.js)"
+            "ubo": "no-setTimeout-if.js (nostif.js, prevent-setTimeout.js, setTimeout-defuser.js)"
         },
         {
-            "adg": "prevent-window-open"
+            "adg": "prevent-window-open",
+            "ubo": "prevent-window-open.js (nowoif.js, no-window-open-if.js, window.open-defuser.js)"
         },
         {
             "adg": "remove-attr",
@@ -131,10 +204,19 @@
         },
         {
             "adg": "remove-cookie",
-            "ubo": "cookie-remover.js"
+            "ubo": "remove-cookie.js (cookie-remover.js)",
+            "abp": "cookie-remover"
         },
         {
-            "adg": "set-attr"
+            "adg": "remove-node-text",
+            "ubo": "remove-node-text.js (rmnt.js)"
+        },
+        {
+            "adg": "scorecardresearch-beacon"
+        },
+        {
+            "adg": "set-attr",
+            "ubo": "set-attr.js (removed)"
         },
         {
             "adg": "set-constant",
@@ -142,7 +224,31 @@
             "abp": "override-property-read"
         },
         {
+            "adg": "set-cookie",
+            "ubo": "set-cookie.js"
+        },
+        {
+            "adg": "set-cookie-reload",
+            "ubo": "set-cookie-reload.js"
+        },
+        {
+            "adg": "set-local-storage-item",
+            "ubo": "set-local-storage-item.js"
+        },
+        {
             "adg": "set-popads-dummy"
+        },
+        {
+            "adg": "set-session-storage-item",
+            "ubo": "set-session-storage-item.js"
+        },
+        {
+            "adg": "spoof-css",
+            "ubo": "spoof-css.js"
+        },
+        {
+            "adg": "xml-prune",
+            "ubo": "xml-prune.js"
         },
         {
             "ubo": "webrtc-if.js"
@@ -154,73 +260,8 @@
             "ubo": "alert-buster.js"
         },
         {
-            "ubo": "gpt-defuser.js"
-        },
-        {
-            "ubo": "golem.de.js"
-        },
-        {
-            "ubo": "upmanager-defuser.js"
-        },
-        {
-            "ubo": "smartadserver.com.js"
-        },
-        {
-            "ubo": "damoh-defuser.js"
-        },
-        {
-            "ubo": "twitch-videoad.js"
-        },
-        {
-            "abp": "trace"
-        },
-        {
-            "abp": "hide-if-shadow-contains"
-        },
-        {
-            "abp": "hide-if-contains"
-        },
-        {
-            "abp": "hide-if-contains-visible-text"
-        },
-        {
-            "abp": "hide-if-contains-and-matches-style"
-        },
-        {
-            "abp": "hide-if-has-and-matches-style"
-        },
-        {
-            "abp": "hide-if-contains-image"
-        },
-        {
-            "abp": "strip-fetch-query-parameter"
-        },
-        {
-            "abp": "hide-if-contains-image-hash"
-        },
-        {
-            "abp": "ml-hide-if-graph-matches"
-        },
-        {
-            "abp": "debug"
-        },
-        {
-            "abp": "hide-if-labelled-by"
-        },
-        {
-            "abp": "hide-if-matches-xpath"
-        },
-        {
-            "abp": "profile"
-        },
-        {
-            "abp": "freeze-element"
-        },
-        {
-            "abp": "prepareInjection"
-        },
-        {
-            "abp": "commitInjection"
+            "adg": "href-sanitizer",
+            "ubo": "href-sanitizer.js"
         },
         {
             "abp": "abort-on-iframe-property-read"
@@ -229,13 +270,129 @@
             "abp": "abort-on-iframe-property-write"
         },
         {
-            "ubo": "abort-current-script.js (acs.js, abort-current-inline-script.js, acis.js)"
+            "abp": "freeze-element"
         },
         {
-            "ubo": "refresh-defuser.js"
+            "abp": "json-override"
         },
         {
-            "ubo": "no-floc.js"
+            "abp": "simulate-mouse-event"
+        },
+        {
+            "abp": "strip-fetch-query-parameter"
+        },
+        {
+            "abp": "hide-if-contains"
+        },
+        {
+            "abp": "hide-if-contains-image"
+        },
+        {
+            "abp": "hide-if-contains-image-hash"
+        },
+        {
+            "abp": "hide-if-contains-similar-text"
+        },
+        {
+            "abp": "hide-if-contains-visible-text"
+        },
+        {
+            "abp": "hide-if-contains-and-matches-style"
+        },
+        {
+            "abp": "hide-if-graph-matches"
+        },
+        {
+            "abp": "hide-if-has-and-matches-style"
+        },
+        {
+            "abp": "hide-if-labelled-by"
+        },
+        {
+            "abp": "hide-if-matches-xpath"
+        },
+        {
+            "abp": "hide-if-matches-computed-xpath"
+        },
+        {
+            "abp": "hide-if-shadow-contains"
+        },
+        {
+            "abp": "debug"
+        },
+        {
+            "abp": "trace"
+        },
+        {
+            "abp": "race"
+        },
+        {
+            "ubo": "window.name-defuser.js"
+        },
+        {
+            "ubo": "trusted-set-constant.js (trusted-set.js)"
+        },
+        {
+            "ubo": "trusted-set-cookie.js"
+        },
+        {
+            "ubo": "trusted-set-local-storage-item.js"
+        },
+        {
+            "ubo": "trusted-replace-fetch-response.js (trusted-rpfr.js)"
+        },
+        {
+            "adg": "json-prune-fetch-response",
+            "ubo": "json-prune-fetch-response.js"
+        },
+        {
+            "adg": "json-prune-xhr-response",
+            "ubo": "json-prune-xhr-response.js"
+        },
+        {
+            "ubo": "trusted-replace-xhr-response.js"
+        },
+        {
+            "ubo": "multiup.js"
+        },
+        {
+            "ubo": "trusted-set-cookie-reload.js"
+        },
+        {
+            "ubo": "trusted-click-element.js"
+        },
+        {
+            "ubo": "trusted-prune-inbound-object.js"
+        },
+        {
+            "ubo": "trusted-prune-outbound-object.js"
+        },
+        {
+            "ubo": "trusted-set-session-storage-item.js"
+        },
+        {
+            "ubo": "trusted-replace-node-text.js (trusted-rpnt.js, replace-node-text.js, rpnt.js)"
+        },
+        {
+            "ubo": "remove-cache-storage-item.js"
+        },
+        {
+            "ubo": "trusted-replace-argument.js"
+        },
+        {
+            "ubo": "trusted-replace-outbound-text.js"
+        },
+        {
+            "ubo": "trusted-suppress-native-method.js"
+        },
+        {
+            "ubo": "trusted-prevent-xhr.js"
+        },
+        {
+            "ubo": "trusted-prevent-dom-bypass.js"
+        },
+        {
+            "ubo": "trusted-override-element-method.js"
         }
     ],
     "redirects": [
@@ -271,11 +428,14 @@
             "ubo": "click2load.html"
         },
         {
+            "adg": "didomi-loader"
+        },
+        {
             "adg": "fingerprintjs2",
             "ubo": "fingerprint2.js"
         },
         {
-            "adg": "fingerprint3js",
+            "adg": "fingerprintjs3",
             "ubo": "fingerprint3.js"
         },
         {
@@ -285,6 +445,10 @@
         {
             "adg": "google-analytics-ga",
             "ubo": "google-analytics_ga.js"
+        },
+        {
+            "adg": "google-ima3",
+            "ubo": "google-ima.js"
         },
         {
             "adg": "googlesyndication-adsbygoogle",
@@ -307,11 +471,15 @@
             "adg": "metrika-yandex-tag"
         },
         {
+            "adg": "naver-wcslog"
+        },
+        {
             "adg": "noeval",
             "ubo": "noeval-silent.js"
         },
         {
             "adg": "noopcss",
+            "ubo": "noop.css",
             "abp": "blank-css"
         },
         {
@@ -323,6 +491,10 @@
             "adg": "noopjs",
             "ubo": "noop.js",
             "abp": "blank-js"
+        },
+        {
+            "adg": "noopjson",
+            "ubo": "noop.json"
         },
         {
             "adg": "nooptext",
@@ -341,13 +513,29 @@
         },
         {
             "adg": "noopvmap-1.0",
-            "ubo": "noop-vmap1.0.xml"
+            "ubo": "noop-vmap1.xml"
         },
         {
-            "adg": "noopvast-2.0"
+            "adg": "noopvast-2.0",
+            "ubo": "noop-vast2.xml"
         },
         {
-            "adg": "noopvast-3.0"
+            "adg": "noopvast-3.0",
+            "ubo": "noop-vast3.xml"
+        },
+        {
+            "adg": "noopvast-4.0",
+            "ubo": "noop-vast4.xml"
+        },
+        {
+            "adg": "pardot-1.0"
+        },
+        {
+            "adg": "prebid"
+        },
+        {
+            "adg": "prebid-ads",
+            "ubo": "prebid-ads.js"
         },
         {
             "adg": "prebid-ads",
@@ -378,9 +566,6 @@
             "ubo": "popads-dummy.js"
         },
         {
-            "ubo": "addthis_widget.js"
-        },
-        {
             "ubo": "amazon_ads.js"
         },
         {
@@ -406,22 +591,13 @@
             "ubo": "hd-main.js"
         },
         {
-            "ubo": "ligatus_angular-tag.js"
-        },
-        {
-            "ubo": "monkeybroker.js"
-        },
-        {
             "ubo": "outbrain-widget.js"
-        },
-        {
-            "ubo": "window.open-defuser.js"
         },
         {
             "ubo": "noeval.js"
         },
         {
-            "ubo": "mxpnl_mixpanel.js"
+            "ubo": "noop-0.5s.mp3"
         }
     ]
 }

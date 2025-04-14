@@ -6,6 +6,8 @@ const name = 'prevent-bab';
 
 const testProp = 'evalProp';
 
+const nativeEval = window.eval;
+
 const beforeEach = () => {
     window.__debug = () => {
         window.hit = 'FIRED';
@@ -14,29 +16,14 @@ const beforeEach = () => {
 
 const afterEach = () => {
     clearGlobalProps(testProp, 'hit', '__debug');
+    window.eval = nativeEval;
 };
 
 module(name, { beforeEach, afterEach });
 
-test('Checking if alias name works', (assert) => {
-    const adgParams = {
-        name,
-        engine: 'test',
-        verbose: true,
-    };
-    const uboParams = {
-        name: 'nobab',
-        engine: 'test',
-        verbose: true,
-    };
-
-    const codeByAdgParams = window.scriptlets.invoke(adgParams);
-    const codeByUboParams = window.scriptlets.invoke(uboParams);
-
-    assert.strictEqual(codeByAdgParams, codeByUboParams, 'ubo name - ok');
-});
-
 test('works eval with AdblockBlock', (assert) => {
+    const originalEvalString = window.eval.toString();
+
     runScriptlet(name);
 
     const evalWrap = eval;
@@ -44,6 +31,7 @@ test('works eval with AdblockBlock', (assert) => {
 
     assert.strictEqual(window[testProp], undefined);
     assert.strictEqual(window.hit, 'FIRED', 'hit fired');
+    assert.strictEqual(window.eval.toString(), originalEvalString, 'eval.toString() should return original value');
 });
 
 test('sample eval script works', (assert) => {

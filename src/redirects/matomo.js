@@ -7,10 +7,13 @@ import { hit, noopFunc } from '../helpers';
  * @description
  * Mocks the piwik.js file of Matomo (formerly Piwik).
  *
- * **Example**
- * ```
+ * ### Examples
+ *
+ * ```adblock
  * ||example.org/piwik.js$script,redirect=matomo
  * ```
+ *
+ * @added v1.5.0.
  */
 
 export function Matomo(source) {
@@ -23,12 +26,8 @@ export function Matomo(source) {
     AsyncTracker.prototype.addListener = noopFunc;
 
     const matomoWrapper = {
-        getTracker() {
-            return new Tracker();
-        },
-        getAsyncTracker() {
-            return new AsyncTracker();
-        },
+        getTracker: Tracker,
+        getAsyncTracker: AsyncTracker,
     };
 
     window.Piwik = matomoWrapper;
@@ -36,6 +35,9 @@ export function Matomo(source) {
     hit(source);
 }
 
-Matomo.names = ['matomo'];
+export const MatomoNames = ['matomo'];
+
+// eslint-disable-next-line prefer-destructuring
+Matomo.primaryName = MatomoNames[0];
 
 Matomo.injections = [hit, noopFunc];

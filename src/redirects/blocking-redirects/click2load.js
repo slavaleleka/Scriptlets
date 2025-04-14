@@ -27,8 +27,9 @@ function clickToLoad() {
      * Some browsers does not support URL.searchParams.get()
      * but we need script run with no error
      * because frame will be shown anyway if click2load redirect rule used
+     *
      * @param {string} rawQueryStr
-     * @returns {Object} key is parameter name and value is parameter value
+     * @returns {object} key is parameter name and value is parameter value
      */
     const parseSearchParam = (rawQueryStr) => {
         const res = {};
@@ -37,7 +38,7 @@ function clickToLoad() {
         let queryStr = rawQueryStr.substring(1);
         // eslint-disable-next-line no-cond-assign
         while (matchedData = pattern.exec(queryStr)) {
-            if (neededParams.indexOf(matchedData[1]) > -1) {
+            if (neededParams.includes(matchedData[1])) {
                 // destructuring will not work because of babel
                 // eslint-disable-next-line prefer-destructuring
                 res[matchedData[1]] = matchedData[2];
@@ -123,12 +124,12 @@ function clickToLoad() {
     /**
      * Returns translations data for navigator.language
      * or 'en' if navigator.language is not supported
-     * @returns {Object} data for one locale with 'title' and 'button' keys
+     *
+     * @returns {object} data for one locale with 'title' and 'button' keys
      */
     const getTranslations = () => {
         const baseLocaleData = translationsData.en;
         try {
-            // eslint-disable-next-line compat/compat
             const currentLocale = navigator.language.toLowerCase();
             let localeData = translationsData[currentLocale];
             if (!localeData) {
@@ -150,6 +151,7 @@ function clickToLoad() {
 
     /**
      * Prepares frame url to replace on button click
+     *
      * @param {string} originUrl passed origin frame url
      * @param {string} unblockTokenName param name for further validation
      * @param {string} unblockTokenValue param value for further validation
@@ -215,6 +217,7 @@ function clickToLoad() {
 
     /**
      * Checks whether the rule has 'frame' or 'subdocument' modifier
+     *
      * @param {string} rule blocking rules passed into redirect
      * @returns {boolean}
      */
@@ -226,11 +229,12 @@ function clickToLoad() {
         const FRAME_MARKER = 'frame';
         const SUBDOCUMENT_MARKER = 'subdocument';
         const ruleModifiers = substringAfter(rule, '$').split(',');
-        return ruleModifiers.indexOf(FRAME_MARKER) > -1
-            || ruleModifiers.indexOf(SUBDOCUMENT_MARKER) > -1;
+        return ruleModifiers.includes(FRAME_MARKER)
+            || ruleModifiers.includes(SUBDOCUMENT_MARKER);
     };
     /**
      * Checks whether script runs inside a frame
+     *
      * @returns {boolean}
      */
     const isInsideFrame = () => window.self !== window.top;

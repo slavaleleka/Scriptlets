@@ -4,6 +4,7 @@ import {
     getPropertyInChain,
     createOnErrorHandler,
     hit,
+    isEmptyObject,
 } from '../helpers';
 
 /* eslint-disable max-len */
@@ -11,15 +12,19 @@ import {
  * @scriptlet debug-on-property-write
  *
  * @description
- * This scriptlet is basically the same as [abort-on-property-write](#abort-on-property-write), but instead of aborting it starts the debugger.
+ * This scriptlet is basically the same as [abort-on-property-write](#abort-on-property-write),
+ * but instead of aborting it starts the debugger.
  *
- * **It is not supposed to be used in production filter lists!**
+ * > It is not allowed for prod versions of filter lists.
  *
- * **Syntax**
- * ```
+ * ### Examples
+ *
+ * ```adblock
  * ! Aborts script when it tries to write in property `window.test`
  * example.org#%#//scriptlet('debug-on-property-write', 'test')
  * ```
+ *
+ * @added v1.0.4.
  */
 /* eslint-enable max-len */
 export function debugOnPropertyWrite(source, property) {
@@ -57,9 +62,12 @@ export function debugOnPropertyWrite(source, property) {
     window.onerror = createOnErrorHandler(rid).bind();
 }
 
-debugOnPropertyWrite.names = [
+export const debugOnPropertyWriteNames = [
     'debug-on-property-write',
 ];
+
+// eslint-disable-next-line prefer-destructuring
+debugOnPropertyWrite.primaryName = debugOnPropertyWriteNames[0];
 
 debugOnPropertyWrite.injections = [
     randomId,
@@ -67,4 +75,5 @@ debugOnPropertyWrite.injections = [
     getPropertyInChain,
     createOnErrorHandler,
     hit,
+    isEmptyObject,
 ];

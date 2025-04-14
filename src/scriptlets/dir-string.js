@@ -11,20 +11,22 @@ import { hit } from '../helpers';
  * that devtools are open (using this scriptlet),
  * it will automatically disable the adblock circumvention script.
  *
- * Related ABP source:
- * https://github.com/adblockplus/adblockpluscore/blob/6b2a309054cc23432102b85d13f12559639ef495/lib/content/snippets.js#L766
+ * ### Syntax
  *
- * **Syntax**
- * ```
+ * ```text
  * example.org#%#//scriptlet('dir-string'[, times])
  * ```
- * - `times` - optional, the number of times to call the `toString` method of the argument to `console.dir`
  *
- * **Example**
- * ```
+ * - `times` — optional, the number of times to call the `toString` method of the argument to `console.dir`
+ *
+ * ### Examples
+ *
+ * ```adblock
  * ! Run 2 times
  * example.org#%#//scriptlet('dir-string', '2')
  * ```
+ *
+ * @added v1.0.4.
  */
 /* eslint-enable max-len */
 export function dirString(source, times) {
@@ -47,9 +49,11 @@ export function dirString(source, times) {
     console.dir = dirWrapper;
 }
 
-dirString.names = [
+export const dirStringNames = [
     'dir-string',
-    'abp-dir-string',
 ];
+
+// eslint-disable-next-line prefer-destructuring
+dirString.primaryName = dirStringNames[0];
 
 dirString.injections = [hit];

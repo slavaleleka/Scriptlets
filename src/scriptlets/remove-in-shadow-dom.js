@@ -1,9 +1,10 @@
 import {
     hit,
     observeDOMChanges,
-    flatten,
     findHostElements,
     pierceShadowDom,
+    flatten,
+    throttle,
 } from '../helpers';
 
 /**
@@ -12,8 +13,9 @@ import {
  * @description
  * Removes elements inside open shadow DOM elements.
  *
- * **Syntax**
- * ```
+ * ### Syntax
+ *
+ * ```text
  * example.org#%#//scriptlet('remove-in-shadow-dom', selector[, baseSelector])
  * ```
  *
@@ -22,16 +24,19 @@ import {
  * narrows down the part of the page DOM where shadow-dom host supposed to be,
  * defaults to document.documentElement
  *
- * > `baseSelector` should match element of the page DOM, but not of shadow DOM
+ * > `baseSelector` should match element of the page DOM, but not of shadow DOM.
  *
- * **Examples**
- * ```
+ * ### Examples
+ *
+ * ```adblock
  * ! removes menu bar
  * virustotal.com#%#//scriptlet('remove-in-shadow-dom', 'iron-pages', 'vt-virustotal-app')
  *
  * ! removes floating element
  * virustotal.com#%#//scriptlet('remove-in-shadow-dom', 'vt-ui-contact-fab')
  * ```
+ *
+ * @added v1.3.14.
  */
 export function removeInShadowDom(source, selector, baseSelector) {
     // do nothing if browser does not support ShadowRoot
@@ -77,14 +82,20 @@ export function removeInShadowDom(source, selector, baseSelector) {
     observeDOMChanges(removeHandler, true);
 }
 
-removeInShadowDom.names = [
+export const removeInShadowDomNames = [
     'remove-in-shadow-dom',
 ];
+
+// eslint-disable-next-line prefer-destructuring
+removeInShadowDom.primaryName = removeInShadowDomNames[0];
 
 removeInShadowDom.injections = [
     hit,
     observeDOMChanges,
-    flatten,
     findHostElements,
     pierceShadowDom,
+    // following helpers should be imported and injected
+    // because they are used by helpers above
+    flatten,
+    throttle,
 ];

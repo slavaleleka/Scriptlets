@@ -1,6 +1,4 @@
-import {
-    hit, createOnErrorHandler, randomId,
-} from '../helpers';
+import { hit, createOnErrorHandler, randomId } from '../helpers';
 
 /**
  * @scriptlet prevent-popads-net
@@ -11,10 +9,13 @@ import {
  * Related UBO scriptlet:
  * https://github.com/gorhill/uBlock/wiki/Resources-Library#popadsnetjs-
  *
- * **Syntax**
- * ```
+ * ### Syntax
+ *
+ * ```adblock
  * example.org#%#//scriptlet('prevent-popads-net')
  * ```
+ *
+ * @added v1.0.4.
  */
 export function preventPopadsNet(source) {
     const rid = randomId();
@@ -34,12 +35,15 @@ export function preventPopadsNet(source) {
     hit(source);
 }
 
-preventPopadsNet.names = [
+export const preventPopadsNetNames = [
     'prevent-popads-net',
     // aliases are needed for matching the related scriptlet converted into our syntax
     'popads.net.js',
     'ubo-popads.net.js',
     'ubo-popads.net',
 ];
+
+// eslint-disable-next-line prefer-destructuring
+preventPopadsNet.primaryName = preventPopadsNetNames[0];
 
 preventPopadsNet.injections = [createOnErrorHandler, randomId, hit];

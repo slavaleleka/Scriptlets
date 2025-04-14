@@ -7,10 +7,13 @@ import { hit, noopFunc } from '../helpers';
  * Mocks AT Internat SmartTag.
  * https://developers.atinternet-solutions.com/as2-tagging-en/javascript-en/getting-started-javascript-en/tracker-initialisation-javascript-en/
  *
- * **Example**
+ * ### Examples
+ *
+ * ```adblock
+ * ||example.com/assets/scripts/smarttag.js$script,redirect=ati-smarttag
  * ```
- * ||bloctel.gouv.fr/assets/scripts/smarttag.js$script,redirect=ati-smarttag
- * ```
+ *
+ * @added v1.5.0.
  */
 export function ATInternetSmartTag(source) {
     const setNoopFuncWrapper = {
@@ -55,7 +58,10 @@ export function ATInternetSmartTag(source) {
 
         click: sendNoopFuncWrapper,
         clickListener: sendNoopFuncWrapper,
-        internalSearch: sendNoopFuncWrapper,
+        internalSearch: {
+            set: noopFunc,
+            send: noopFunc,
+        },
 
         ecommerce: ecommerceWrapper,
 
@@ -85,9 +91,7 @@ export function ATInternetSmartTag(source) {
 
     const smartTagWrapper = {
         Tracker: {
-            Tag() {
-                return new tag(); // eslint-disable-line new-cap
-            },
+            Tag: tag,
         },
     };
 
@@ -96,8 +100,11 @@ export function ATInternetSmartTag(source) {
     hit(source);
 }
 
-ATInternetSmartTag.names = [
+export const ATInternetSmartTagNames = [
     'ati-smarttag',
 ];
+
+// eslint-disable-next-line prefer-destructuring
+ATInternetSmartTag.primaryName = ATInternetSmartTagNames[0];
 
 ATInternetSmartTag.injections = [hit, noopFunc];

@@ -1,4 +1,10 @@
-import { hit, observeDOMChanges } from '../helpers';
+import {
+    hit,
+    observeDOMChanges,
+    parseFlags,
+    logMessage,
+    throttle,
+} from '../helpers';
 
 /* eslint-disable max-len */
 /**
@@ -12,34 +18,39 @@ import { hit, observeDOMChanges } from '../helpers';
  * Related UBO scriptlet:
  * https://github.com/gorhill/uBlock/wiki/Resources-Library#remove-attrjs-
  *
- * **Syntax**
- * ```
+ * ### Syntax
+ *
+ * ```text
  * example.org#%#//scriptlet('remove-attr', attrs[, selector, applying])
  * ```
  *
  * - `attrs` — required, attribute or list of attributes joined by '|'
  * - `selector` — optional, CSS selector, specifies DOM nodes from which the attributes will be removed
- * - `applying` — optional, one or more space-separated flags that describe the way scriptlet apply, defaults to 'asap stay'; possible flags:
+ * - `applying` — optional, one or more space-separated flags that describe the way scriptlet apply,
+ *   defaults to 'asap stay'; possible flags:
  *     - `asap` — runs as fast as possible **once**
  *     - `complete` — runs **once** after the whole page has been loaded
  *     - `stay` — as fast as possible **and** stays on the page observing possible DOM changes
  *
- * **Examples**
- * 1.  Removes by attribute
- *     ```
+ * ### Examples
+ *
+ * 1. Removes by attribute
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('remove-attr', 'example|test')
  *     ```
  *
  *     ```html
- *     <!-- before  -->
+ *     <!-- before -->
  *     <div example="true" test="true">Some text</div>
  *
  *     <!-- after -->
  *     <div>Some text</div>
  *     ```
  *
- * 2. Removes with specified selector
- *     ```
+ * 1. Removes with specified selector
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('remove-attr', 'example', 'div[class="inner"]')
  *     ```
  *
@@ -55,10 +66,13 @@ import { hit, observeDOMChanges } from '../helpers';
  *     </div>
  *     ```
  *
- *  3. Using flags
- *     ```
+ * 1. Using flags
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('remove-attr', 'example', 'html', 'asap complete')
  *     ```
+ *
+ * @added v1.0.4.
  */
 /* eslint-enable max-len */
 export function removeAttr(source, attrs, selector, applying = 'asap stay') {
@@ -75,8 +89,7 @@ export function removeAttr(source, attrs, selector, applying = 'asap stay') {
         try {
             nodes = [].slice.call(document.querySelectorAll(selector));
         } catch (e) {
-            // eslint-disable-next-line no-console
-            console.log(`Invalid remove-attr selector arg: '${selector}'`);
+            logMessage(source, `Invalid selector arg: '${selector}'`);
         }
         let removed = false;
         nodes.forEach((node) => {
@@ -90,36 +103,33 @@ export function removeAttr(source, attrs, selector, applying = 'asap stay') {
         }
     };
 
-    const FLAGS_DIVIDER = ' ';
-    const ASAP_FLAG = 'asap';
-    const COMPLETE_FLAG = 'complete';
-    const STAY_FLAG = 'stay';
-
-    const VALID_FLAGS = [STAY_FLAG, ASAP_FLAG, COMPLETE_FLAG];
-
-    /* eslint-disable no-restricted-properties */
-    const passedFlags = applying.trim()
-        .split(FLAGS_DIVIDER)
-        .filter((f) => VALID_FLAGS.indexOf(f) !== -1);
+    const flags = parseFlags(applying);
 
     const run = () => {
         rmattr();
-        if (!passedFlags.indexOf(STAY_FLAG) !== -1) {
+        if (!flags.hasFlag(flags.STAY)) {
             return;
         }
         // 'true' for observing attributes
         observeDOMChanges(rmattr, true);
     };
 
-    if (passedFlags.indexOf(ASAP_FLAG) !== -1) {
-        rmattr();
+    if (flags.hasFlag(flags.ASAP)) {
+        // https://github.com/AdguardTeam/Scriptlets/issues/245
+        // Call rmattr on DOM content loaded
+        // to ensure that target node is present on the page
+        if (document.readyState === 'loading') {
+            window.addEventListener('DOMContentLoaded', rmattr, { once: true });
+        } else {
+            rmattr();
+        }
     }
 
-    if (document.readyState !== 'complete' && passedFlags.indexOf(COMPLETE_FLAG) !== -1) {
+    if (document.readyState !== 'complete' && flags.hasFlag(flags.COMPLETE)) {
         window.addEventListener('load', run, { once: true });
-    } else if (passedFlags.indexOf(STAY_FLAG) !== -1) {
-        // Do not call rmattr() twice for 'asap stay' flag
-        if (passedFlags.length === 1) {
+    } else if (flags.hasFlag(flags.STAY)) {
+        // Only call rmattr for single 'stay' flag
+        if (!applying.includes(' ')) {
             rmattr();
         }
         // 'true' for observing attributes
@@ -127,7 +137,7 @@ export function removeAttr(source, attrs, selector, applying = 'asap stay') {
     }
 }
 
-removeAttr.names = [
+export const removeAttrNames = [
     'remove-attr',
     // aliases are needed for matching the related scriptlet converted into our syntax
     'remove-attr.js',
@@ -138,4 +148,15 @@ removeAttr.names = [
     'ubo-ra',
 ];
 
-removeAttr.injections = [hit, observeDOMChanges];
+// eslint-disable-next-line prefer-destructuring
+removeAttr.primaryName = removeAttrNames[0];
+
+removeAttr.injections = [
+    hit,
+    observeDOMChanges,
+    parseFlags,
+    logMessage,
+    // following helpers should be imported and injected
+    // because they are used by helpers above
+    throttle,
+];

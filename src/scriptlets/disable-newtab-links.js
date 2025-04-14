@@ -9,10 +9,13 @@ import { hit } from '../helpers';
  * Related UBO scriptlet:
  * https://github.com/gorhill/uBlock/wiki/Resources-Library#disable-newtab-linksjs-
  *
- * **Syntax**
- * ```
+ * ### Syntax
+ *
+ * ```adblock
  * example.org#%#//scriptlet('disable-newtab-links')
  * ```
+ *
+ * @added v1.0.4.
  */
 export function disableNewtabLinks(source) {
     document.addEventListener('click', (ev) => {
@@ -29,13 +32,16 @@ export function disableNewtabLinks(source) {
     });
 }
 
-disableNewtabLinks.names = [
+export const disableNewtabLinksNames = [
     'disable-newtab-links',
     // aliases are needed for matching the related scriptlet converted into our syntax
     'disable-newtab-links.js',
     'ubo-disable-newtab-links.js',
     'ubo-disable-newtab-links',
 ];
+
+// eslint-disable-next-line prefer-destructuring
+disableNewtabLinks.primaryName = disableNewtabLinksNames[0];
 
 disableNewtabLinks.injections = [
     hit,

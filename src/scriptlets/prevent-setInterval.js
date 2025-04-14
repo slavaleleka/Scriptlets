@@ -1,12 +1,19 @@
 import {
     hit,
     noopFunc,
+    isPreventionNeeded,
+    logMessage,
+    toRegExp,
+    nativeIsNaN,
     parseMatchArg,
     parseDelayArg,
-    // following helpers are needed for helpers above
-    toRegExp,
-    startsWith,
-    nativeIsNaN,
+    isValidCallback,
+    isValidMatchStr,
+    isValidStrPattern,
+    escapeRegExp,
+    nativeIsFinite,
+    isValidMatchNumber,
+    parseRawDelay,
 } from '../helpers';
 
 /* eslint-disable max-len */
@@ -15,50 +22,61 @@ import {
  *
  * @description
  * Prevents a `setInterval` call if:
- * 1) the text of the callback is matching the specified `search` string/regexp which does not start with `!`;
- * otherwise mismatched calls should be defused;
- * 2) the interval is matching the specified `delay`; otherwise mismatched calls should be defused.
+ *
+ * 1. The text of the callback is matching the specified `matchCallback` string/regexp which does not start with `!`;
+ *    otherwise mismatched calls should be defused.
+ * 1. The delay is matching the specified `matchDelay`; otherwise mismatched calls should be defused.
  *
  * Related UBO scriptlet:
  * https://github.com/gorhill/uBlock/wiki/Resources-Library#no-setinterval-ifjs-
  *
- * **Syntax**
- * ```
- * example.org#%#//scriptlet('prevent-setInterval'[, search[, delay]])
+ * ### Syntax
+ *
+ * ```text
+ * example.org#%#//scriptlet('prevent-setInterval'[, matchCallback[, matchDelay]])
  * ```
  *
- * Call with no arguments will log calls to setInterval while debugging (`log-setInterval` superseding),
- * so production filter lists' rules definitely require at least one of the parameters:
- * - `search` - optional, string or regular expression; invalid regular expression will be skipped and all callbacks will be matched.
- * If starts with `!`, scriptlet will not match the stringified callback but all other will be defused.
- * If do not start with `!`, the stringified callback will be matched.
- * If not set, prevents all `setInterval` calls due to specified `delay`.
- * - `delay` - optional, must be an integer.
- * If starts with `!`, scriptlet will not match the delay but all other will be defused.
- * If do not start with `!`, the delay passed to the `setInterval` call will be matched.
+ * > Call with no arguments will log all setInterval calls (`log-setInterval` superseding),
+ * > it may be useful for debugging but it is not allowed for prod versions of filter lists.
  *
- * > If `prevent-setInterval` without parameters logs smth like `setInterval(undefined, 1000)`,
- * it means that no callback was passed to setInterval() and that's not scriptlet issue
-
- *  **Examples**
- * 1. Prevents `setInterval` calls if the callback matches `/\.test/` regardless of the delay.
- *     ```bash
+ * - `matchCallback` — optional, string or regular expression;
+ *   invalid regular expression will be skipped and all callbacks will be matched.
+ *   If starts with `!`, scriptlet will not match the stringified callback but all other will be defused.
+ *   If do not start with `!`, the stringified callback will be matched.
+ *   If not set, prevents all `setInterval` calls due to specified `matchDelay`.
+ * - `matchDelay` — optional, must be an integer.
+ *   If starts with `!`, scriptlet will not match the delay but all other will be defused.
+ *   If do not start with `!`, the delay passed to the `setInterval` call will be matched.
+ *   Decimal delay values will be rounded down, e.g `10.95` will be matched by `matchDelay` with value `10`.
+ *
+ * > If `prevent-setInterval` log looks like `setInterval(undefined, 1000)`,
+ * > it means that no callback was passed to setInterval() and that's not scriptlet issue
+ * > and obviously it can not be matched by `matchCallback`.
+ *
+ * ### Examples
+ *
+ * 1. Prevents `setInterval` calls if the callback matches `/\.test/` regardless of the delay
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('prevent-setInterval', '/\.test/')
  *     ```
  *
  *     For instance, the following call will be prevented:
+ *
  *     ```javascript
  *     setInterval(function () {
  *         window.test = "value";
  *     }, 100);
  *     ```
  *
- * 2. Prevents `setInterval` calls if the callback does not contain `value`.
- *     ```
+ * 1. Prevents `setInterval` calls if the callback does not contain `value`
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('prevent-setInterval', '!value')
  *     ```
  *
  *     For instance, only the first of the following calls will be prevented:
+ *
  *     ```javascript
  *     setInterval(function () {
  *         window.test = "test -- prevented";
@@ -71,12 +89,14 @@ import {
  *     }, 500);
  *     ```
  *
- * 3. Prevents `setInterval` calls if the callback contains `value` and the delay is not set to `300`.
- *     ```
+ * 1. Prevents `setInterval` calls if the callback contains `value` and the delay is not set to `300`
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('prevent-setInterval', 'value', '!300')
  *     ```
  *
  *     For instance, only the first of the following calls will not be prevented:
+ *
  *     ```javascript
  *     setInterval(function () {
  *         window.test = "value 1 -- executed";
@@ -89,12 +109,14 @@ import {
  *     }, 500);
  *     ```
  *
- * 4. Prevents `setInterval` calls if the callback does not contain `value` and the delay is not set to `300`.
- *     ```
+ * 1. Prevents `setInterval` calls if the callback does not contain `value` and the delay is not set to `300`
+ *
+ *     ```adblock
  *     example.org#%#//scriptlet('prevent-setInterval', '!value', '!300')
  *     ```
  *
  *     For instance, only the second of the following calls will be prevented:
+ *
  *     ```javascript
  *     setInterval(function () {
  *         window.test = "test -- executed";
@@ -109,64 +131,46 @@ import {
  *         window.value = "test -- executed";
  *     }, 500);
  *     ```
+ *
+ * 1. Prevents `setInterval` calls if the callback contains `value` and delay is a decimal number
+ *
+ *     ```adblock
+ *     example.org#%#//scriptlet('prevent-setInterval', 'value', '300')
+ *     ```
+ *
+ *     For instance, the following calls will be prevented:
+ *
+ *     ```javascript
+ *     setInterval(function () {
+ *         window.test = "value";
+ *     }, 300);
+ *     setInterval(function () {
+ *         window.test = "value";
+ *     }, 300 + Math.random());
+ *     ```
+ *
+ * @added v1.0.4.
  */
 /* eslint-enable max-len */
-export function preventSetInterval(source, match, delay) {
-    // if browser does not support Proxy (e.g. Internet Explorer),
-    // we use none-proxy "legacy" wrapper for preventing
-    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy
-    const isProxySupported = typeof Proxy !== 'undefined';
-
-    const nativeInterval = window.setInterval;
-    const log = console.log.bind(console); // eslint-disable-line no-console
-
+export function preventSetInterval(source, matchCallback, matchDelay) {
     // logs setIntervals to console if no arguments have been specified
-    const shouldLog = ((typeof match === 'undefined') && (typeof delay === 'undefined'));
-
-    const { isInvertedMatch, matchRegexp } = parseMatchArg(match);
-    const { isInvertedDelayMatch, delayMatch } = parseDelayArg(delay);
-
-    const getShouldPrevent = (callbackStr, interval) => {
-        let shouldPrevent = false;
-        if (!delayMatch) {
-            shouldPrevent = matchRegexp.test(callbackStr) !== isInvertedMatch;
-        } else if (!match) {
-            shouldPrevent = (interval === delayMatch) !== isInvertedDelayMatch;
-        } else {
-            shouldPrevent = matchRegexp.test(callbackStr) !== isInvertedMatch
-                && (interval === delayMatch) !== isInvertedDelayMatch;
-        }
-        return shouldPrevent;
-    };
-
-    const legacyIntervalWrapper = (callback, interval, ...args) => {
-        let shouldPrevent = false;
-        // https://github.com/AdguardTeam/Scriptlets/issues/105
-        const cbString = String(callback);
-        if (shouldLog) {
-            hit(source);
-            log(`setInterval(${cbString}, ${interval})`);
-        } else {
-            shouldPrevent = getShouldPrevent(cbString, interval);
-        }
-        if (shouldPrevent) {
-            hit(source);
-            return nativeInterval(noopFunc, interval);
-        }
-        return nativeInterval.apply(window, [callback, interval, ...args]);
-    };
+    const shouldLog = ((typeof matchCallback === 'undefined') && (typeof matchDelay === 'undefined'));
 
     const handlerWrapper = (target, thisArg, args) => {
         const callback = args[0];
-        const interval = args[1];
+        const delay = args[1];
         let shouldPrevent = false;
-        // https://github.com/AdguardTeam/Scriptlets/issues/105
-        const cbString = String(callback);
         if (shouldLog) {
             hit(source);
-            log(`setInterval(${cbString}, ${interval})`);
+            // https://github.com/AdguardTeam/Scriptlets/issues/105
+            logMessage(source, `setInterval(${String(callback)}, ${delay})`, true);
         } else {
-            shouldPrevent = getShouldPrevent(cbString, interval);
+            shouldPrevent = isPreventionNeeded({
+                callback,
+                delay,
+                matchCallback,
+                matchDelay,
+            });
         }
         if (shouldPrevent) {
             hit(source);
@@ -179,12 +183,10 @@ export function preventSetInterval(source, match, delay) {
         apply: handlerWrapper,
     };
 
-    window.setInterval = isProxySupported
-        ? new Proxy(window.setInterval, setIntervalHandler)
-        : legacyIntervalWrapper;
+    window.setInterval = new Proxy(window.setInterval, setIntervalHandler);
 }
 
-preventSetInterval.names = [
+export const preventSetIntervalNames = [
     'prevent-setInterval',
     // aliases are needed for matching the related scriptlet converted into our syntax
     'no-setInterval-if.js', // new implementation of setInterval-defuser.js
@@ -201,12 +203,24 @@ preventSetInterval.names = [
     'ubo-sid',
 ];
 
+// eslint-disable-next-line prefer-destructuring
+preventSetInterval.primaryName = preventSetIntervalNames[0];
+
 preventSetInterval.injections = [
     hit,
     noopFunc,
+    isPreventionNeeded,
+    logMessage,
+    // following helpers should be injected as helpers above use them
+    toRegExp,
+    nativeIsNaN,
     parseMatchArg,
     parseDelayArg,
-    toRegExp,
-    startsWith,
-    nativeIsNaN,
+    isValidCallback,
+    isValidMatchStr,
+    isValidStrPattern,
+    escapeRegExp,
+    nativeIsFinite,
+    isValidMatchNumber,
+    parseRawDelay,
 ];

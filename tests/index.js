@@ -1,25 +1,34 @@
 /* eslint-disable no-console */
-const path = require('path');
-const fs = require('fs');
-const { runQunitPuppeteer, printFailedTests, printResultSummary } = require('node-qunit-puppeteer');
-const {
+import path from 'node:path';
+import fs from 'node:fs';
+import { runQunitPuppeteer, printFailedTests, printResultSummary } from 'node-qunit-puppeteer';
+import { fileURLToPath } from 'node:url';
+
+import {
     server,
     port,
     start,
     stop,
-} = require('./server');
+} from './server';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const TESTS_RUN_TIMEOUT = 30000;
 const TESTS_DIST = './dist';
 const TEST_FILE_NAME_MARKER = '.html';
 
-const testServer = server.init();
-
+/**
+ * Returns false if test failed and true if test passed
+ *
+ * @param {string} indexFile
+ * @returns {Promise<boolean>}
+ */
 const runQunit = async (indexFile) => {
     const qunitArgs = {
         targetUrl: `http://localhost:${port}/${indexFile}?test`,
         timeout: TESTS_RUN_TIMEOUT,
-        // needed for logging to console while testing run via `yarn test`
+        // needed for logging to console while testing run via `pnpm test`
         // redirectConsole: true,
         puppeteerArgs: ['--no-sandbox', '--allow-file-access-from-files'],
     };
@@ -28,10 +37,14 @@ const runQunit = async (indexFile) => {
     printResultSummary(result, console);
     if (result.stats.failed > 0) {
         printFailedTests(result, console);
+        return false;
     }
+    return true;
 };
 
-(async () => {
+const runQunitTests = async () => {
+    const testServer = server.init();
+
     await start(testServer, port);
 
     const dirPath = path.resolve(__dirname, TESTS_DIST);
@@ -39,6 +52,7 @@ const runQunit = async (indexFile) => {
         .filter((el) => el.includes(TEST_FILE_NAME_MARKER));
 
     let errorOccurred = false;
+    let testsPassed = true;
 
     try {
         console.log('Running tests..');
@@ -48,7 +62,8 @@ const runQunit = async (indexFile) => {
             // \n is needed to divide logging
             console.log(`\nTesting ${fileName}:`);
             // eslint-disable-next-line no-await-in-loop
-            await runQunit(fileName);
+            const testPassed = await runQunit(fileName);
+            testsPassed = testsPassed && testPassed;
         }
     } catch (e) {
         console.log(e);
@@ -57,9 +72,13 @@ const runQunit = async (indexFile) => {
         errorOccurred = true;
     }
 
-    if (errorOccurred) {
+    if (errorOccurred || !testsPassed) {
         process.exit(1);
     }
 
     await stop(testServer);
-})();
+};
+
+export {
+    runQunitTests,
+};

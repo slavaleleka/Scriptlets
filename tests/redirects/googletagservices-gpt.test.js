@@ -1,22 +1,20 @@
-/* eslint-disable no-underscore-dangle */
-import { runRedirect, clearGlobalProps } from '../helpers';
+import { clearGlobalProps, getRedirectsInstance, evalWrapper } from '../helpers';
 
 const { test, module } = QUnit;
 const name = 'googletagservices-gpt';
 
-const changingProps = ['hit', '__debug'];
-
-const beforeEach = () => {
-    window.__debug = () => {
-        window.hit = 'FIRED';
-    };
-};
+const changingProps = ['googletag'];
 
 const afterEach = () => {
     clearGlobalProps(...changingProps);
 };
 
-module(name, { beforeEach, afterEach });
+let redirects;
+const before = async () => {
+    redirects = await getRedirectsInstance();
+};
+
+module(name, { afterEach, before });
 
 const companionAdsService = {
     addEventListener: null,
@@ -29,25 +27,14 @@ const contentService = {
 };
 
 test('Checking if alias name works', (assert) => {
-    const adgParams = {
-        name,
-        engine: 'test',
-        verbose: true,
-    };
-    const uboParams = {
-        name: 'ubo-googletagservices_gpt.js',
-        engine: 'test',
-        verbose: true,
-    };
-
-    const codeByAdgParams = window.scriptlets.redirects.getCode(adgParams);
-    const codeByUboParams = window.scriptlets.redirects.getCode(uboParams);
+    const codeByAdgParams = redirects.getRedirect(name).content;
+    const codeByUboParams = redirects.getRedirect('ubo-googletagservices_gpt.js').content;
 
     assert.strictEqual(codeByAdgParams, codeByUboParams, 'ubo name - ok');
 });
 
 test('AdGuard Syntax', (assert) => {
-    runRedirect(name);
+    evalWrapper(redirects.getRedirect(name).content);
 
     assert.ok(window.googletag, 'window.googletag have been created');
     assert.equal(window.googletag.apiReady, true, 'apiReady');
@@ -62,21 +49,94 @@ test('AdGuard Syntax', (assert) => {
     assert.strictEqual(typeof mockedPubads.getTargeting, 'function', 'pubads().getTargeting() is function');
     assert.ok(mockedPubads.getTargeting() instanceof Array, 'pubads().getTargeting() returns array');
     assert.strictEqual(mockedPubads.getTargeting().length, 0, 'pubads().getTargeting() is mocked');
-
-    assert.strictEqual(window.hit, 'FIRED', 'hit function was executed');
+    assert.true(mockedPubads.isInitialLoadDisabled(), 'pubads().isInitialLoadDisabled() returns true');
 });
 
 test('Test Slot', (assert) => {
-    runRedirect(name);
+    evalWrapper(redirects.getRedirect(name).content);
 
     assert.ok(window.googletag, 'window.googletag have been created');
     assert.strictEqual(typeof window.googletag.defineSlot(), 'object', 'Slot has been mocked');
 
-    const slot = window.googletag.defineSlot();
-    assert.strictEqual(slot.getAdUnitPath(), '', '.getAdUnitPath() has been mocked.');
-    assert.strictEqual(slot.get(), null, '.get() has been mocked.');
-    assert.strictEqual(slot.getAttributeKeys().length, 0, '.getAttributeKeys() has been mocked.');
-    assert.strictEqual(typeof slot.addService(), 'object', '.addService() has been mocked.');
+    const optDiv = 3;
 
-    assert.strictEqual(window.hit, 'FIRED', 'hit function was executed');
+    const slot = window.googletag.defineSlot('1', 2, optDiv);
+    assert.strictEqual(slot.getAdUnitPath(), '1', '.getAdUnitPath() has been mocked.');
+    assert.strictEqual(slot.getDomId(), optDiv, 'getDomId has been mocked.');
+    assert.strictEqual(slot.getAttributeKeys().length, 0, '.getAttributeKeys() has been mocked.');
+
+    const sizes = slot.getSizes()[0];
+    assert.strictEqual(sizes.getHeight(), 2, '.getSizes() has been mocked.');
+    assert.strictEqual(sizes.getWidth(), 2, '.getSizes() has been mocked.');
+
+    assert.strictEqual(typeof slot.addService(), 'object', '.addService() has been mocked.');
+});
+
+test('Test recreateIframeForSlot', (assert) => {
+    evalWrapper(redirects.getRedirect(name).content);
+
+    assert.ok(window.googletag, 'window.googletag have been created');
+    assert.strictEqual(typeof window.googletag.defineSlot(), 'object', 'Slot has been mocked');
+
+    const slotId = 'slotId';
+    const container = document.createElement('div');
+    container.id = slotId;
+    document.body.append(container);
+
+    window.googletag.defineSlot('', '', slotId);
+    window.googletag.display(slotId);
+
+    const iframe = document.querySelector(`#${slotId} > iframe`);
+    assert.ok(iframe instanceof HTMLIFrameElement, 'container was created');
+
+    const srcdoc = '<body></body>';
+    const mockStyle = 'position: absolute; width: 0px; height: 0px; left: 0px; right: 0px; z-index: -1; border: 0px;';
+    assert.strictEqual(iframe.getAttribute('srcdoc'), srcdoc, 'srcdoc was mocked');
+    assert.strictEqual(iframe.getAttribute('style'), mockStyle, 'slot was hidden by style attr');
+    assert.strictEqual(iframe.getAttribute('width'), '0', 'slot was hidden by width attr');
+    assert.strictEqual(iframe.getAttribute('height'), '0', 'slot was hidden by height attr');
+
+    // https://github.com/AdguardTeam/Scriptlets/issues/259
+    assert.ok(iframe.getAttribute('data-load-complete'), 'attr was mocked');
+    assert.ok(iframe.getAttribute('data-google-container-id'), 'attr was mocked');
+    assert.strictEqual(iframe.getAttribute('sandbox'), '', 'attr was mocked');
+});
+
+test('Test updateTargetingFromMap', (assert) => {
+    evalWrapper(redirects.getRedirect(name).content);
+
+    assert.ok(window.googletag, 'window.googletag have been created');
+    assert.strictEqual(typeof window.googletag.defineSlot(), 'object', 'Slot has been mocked');
+
+    const slot = window.googletag.defineSlot('/1234567/sports', [160, 600], 'div');
+
+    // https://github.com/AdguardTeam/Scriptlets/issues/293
+    slot.updateTargetingFromMap({
+        color: 'red',
+        interests: ['sports', 'music', 'movies'],
+    });
+
+    assert.strictEqual(
+        slot.getTargeting('color')[0],
+        'red',
+        '.getTargeting() has been mocked - color[0] = red.',
+    );
+    assert.strictEqual(
+        slot.getTargeting('interests')[0],
+        'sports',
+        '.getTargeting() has been mocked - interests[0] = sports.',
+    );
+    assert.strictEqual(
+        slot.getTargeting('interests')[1],
+        'music',
+        '.getTargeting() has been mocked - interests[1] = music.',
+    );
+});
+
+test('Test setPrivacySettings', (assert) => {
+    evalWrapper(redirects.getRedirect(name).content);
+
+    const setPrivacySettings = window.googletag.pubads().setPrivacySettings({});
+    assert.ok(window.googletag, 'window.googletag have been created');
+    assert.strictEqual(typeof setPrivacySettings, 'object', 'setPrivacySettings has been mocked');
 });
