@@ -37,4 +37,4 @@ jobs:
                 assignees,
             });
 
-            console.log(`Assigned issue #${issueNumber} to ${assignee}`);
+            console.log(`Assigned issue #${issueNumber} to ${assignees.join(', ')}`);
